@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+dist-ssr/
+*.local
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Python pipeline
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Raw / large geo data (never commit)
+data/raw/
+data/processed/
+*.osm.pbf
+*.pmtiles
+!public/data/*.json
+!public/data/fixtures/
+
+# Logs & coverage
+logs/
+*.log
+npm-debug.log*
+coverage/
+.nyc_output/
+
+# Test / cache
+.cache/
+.turbo/
+*.tsbuildinfo
+
+# Baked 3D scene is committed so free static hosts (Cloudflare Pages / GitHub
+# Pages) can serve the twin without a paid object store. Re-bake locally with
+# pipeline/bake_scene.py — do NOT commit data/raw or data/processed (still ignored).
+# public/scene/

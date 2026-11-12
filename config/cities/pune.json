@@ -1,0 +1,116 @@
+{
+  "id": "pune",
+  "display_name": "Pune & Pimpri-Chinchwad",
+  "scope": "B",
+  "cantonments": true,
+  "label_language": "en",
+  "place_sources": [
+    "wards",
+    "gazetteer"
+  ],
+  "center": [
+    73.8567,
+    18.5204
+  ],
+  "default_zoom": 13.5,
+  "default_pitch": 58,
+  "max_pitch": 85,
+  "maxBounds": [
+    73.65,
+    18.35,
+    74.05,
+    18.75
+  ],
+  "tile_url_env": "VITE_TILE_URL",
+  "basemap": {
+    "light": "https://tiles.openfreemap.org/styles/liberty",
+    "dark": "https://tiles.openfreemap.org/styles/dark"
+  },
+  "basemap_fallback": "https://demotiles.maplibre.org/style.json",
+  "tiles": {
+    "buildings": "/tiles/buildings.pmtiles",
+    "roads": "/tiles/roads.pmtiles",
+    "context": "/tiles/context.pmtiles"
+  },
+  "buildings": {
+    "source_layer": "buildings",
+    "fill_minzoom": 13,
+    "extrusion_minzoom": 13,
+    "stats_url": "/data/buildings.stats.json",
+    "baked_bbox": [
+      73.8317,
+      18.4954,
+      73.8817,
+      18.5454
+    ]
+  },
+  "layers": {
+    "buildings": {
+      "id": "buildings",
+      "status": "ready",
+      "label": "Buildings"
+    },
+    "roads": {
+      "id": "roads",
+      "status": "ready",
+      "label": "Roads"
+    },
+    "water": {
+      "id": "water",
+      "status": "ready",
+      "label": "Water (rivers, lakes, streams)"
+    },
+    "parks": {
+      "id": "parks",
+      "status": "ready",
+      "label": "Parks and green areas"
+    },
+    "transit": {
+      "id": "transit",
+      "status": "ready",
+      "label": "Rail and metro"
+    },
+    "labels": {
+      "id": "labels",
+      "status": "ready",
+      "label": "Place and road names"
+    },
+    "terrain": {
+      "id": "terrain",
+      "status": "ready",
+      "label": "Terrain (hills)"
+    },
+    "trees": {
+      "id": "trees",
+      "status": "ready",
+      "label": "Trees"
+    },
+    "admin": {
+      "id": "admin",
+      "status": "sample",
+      "label": "Admin boundaries (SAMPLE)"
+    }
+  },
+  "honesty": {
+    "day_night": "Day/night is a lighting (basemap style) switch only — not a time-of-day simulation of the city.",
+    "heights": "Building heights are not invented. A building is raised in 3D only when OpenStreetMap gives its height (exact) or its number of floors (an estimate: floors × the floor height shown below). Overture Maps adds many more footprints (from Google Open Buildings and Microsoft ML Buildings) but no extra heights for this area, so those footprints are drawn flat. Most buildings in the center area are therefore flat.",
+    "extent": "Map extent is intended for urban Pune Municipal Corporation (PMC) and Pimpri-Chinchwad Municipal Corporation (PCMC), with cantonments in scope. S0 center tiles are a ~±0.025° bbox around city center — not full PMC/PCMC. SAMPLE admin polygons are illustrative twin-city urban extent, not official wards.",
+    "search_limits": "Place search uses a small fixture index (wards + gazetteer shaped). It is not a complete neighbourhood or POI directory.",
+    "ship_hold": "SHIP HOLD — center-area buildings, roads, water, parks, rail and metro are real OpenStreetMap / Overture Maps data (local bake of a small center box). Admin boundaries are SAMPLE only. Full PMC and PCMC coverage is not built yet. Do not treat as a production release.",
+    "attribution": "Map data © OpenStreetMap contributors (ODbL). Extra building footprints © Overture Maps Foundation (ODbL), including Google Open Buildings (CC BY 4.0) and Microsoft Global ML Building Footprints (ODbL). Terrain: Terrain Tiles on AWS Open Data (Mapzen; SRTM and others). Basemap styles via OpenFreeMap / MapLibre demo tiles where used. SAMPLE admin is hand-authored illustrative geometry.",
+    "camera": "The map opens in 3D: tilted about 58° so raised buildings are visible. Use the Flat button for a straight-down view (no tilt, no raised buildings). Reset view returns to the city center in the current mode. Right-drag or Ctrl-drag to rotate and tilt.",
+    "terrain": "Hills come from a public elevation model (about 30 m detail), shown at true scale (no vertical exaggeration). Small slopes in the city are subtle.",
+    "trees": "Tree markers are only trees surveyed one by one in OpenStreetMap (natural=tree). Woods and parks are shown as green areas, not as individual trees."
+  },
+  "attribution": {
+    "osm": "© OpenStreetMap contributors",
+    "osm_url": "https://www.openstreetmap.org/copyright"
+  },
+  "terrain": {
+    "tiles": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+    "encoding": "terrarium",
+    "maxzoom": 15,
+    "exaggeration": 1,
+    "attribution": "Terrain: Terrain Tiles on AWS Open Data (Mapzen; SRTM, GMTED, NED, ETOPO1 and others)"
+  }
+}

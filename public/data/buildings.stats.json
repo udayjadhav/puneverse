@@ -1,0 +1,28 @@
+{
+  "description": "Building coverage for the S0 center bake (not full PMC/PCMC).",
+  "bbox": [
+    73.8317,
+    18.4954,
+    73.8817,
+    18.5454
+  ],
+  "source_dataset": "osm-geofabrik-western-zone@2026-11-09 + overture-buildings@2026-10-21.0",
+  "floor_height_m": 3.0,
+  "buildings": 44272,
+  "building_parts": 20,
+  "height_explicit": 85,
+  "height_overture": 0,
+  "height_levels_estimate": 129,
+  "height_unknown": 44058,
+  "pct_explicit": 0.19,
+  "pct_overture": 0.0,
+  "pct_levels_estimate": 0.29,
+  "pct_with_height": 0.48,
+  "pct_unknown": 99.52,
+  "by_footprint_dataset": {
+    "OpenStreetMap": 16772,
+    "Google Open Buildings": 23888,
+    "Microsoft ML Buildings": 3612
+  },
+  "overture_added": 27500
+}

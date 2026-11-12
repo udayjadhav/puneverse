@@ -1,0 +1,27 @@
+{
+  "type": "FeatureCollection",
+  "name": "pune-center-s0",
+  "description": "S0 center clip around city.center [73.8567, 18.5204] ±0.025 deg (~2–3 km). For S1/S2 use PMC/PCMC polygons (Bharatlas wards / corp) — not this bbox.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "pune-center-s0",
+        "stage": "S0",
+        "note": "bbox clip for M-S0-CENTER-REAL; not official PMC/PCMC"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [73.8317, 18.4954],
+            [73.8817, 18.4954],
+            [73.8817, 18.5454],
+            [73.8317, 18.5454],
+            [73.8317, 18.4954]
+          ]
+        ]
+      }
+    }
+  ]
+}

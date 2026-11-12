@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family:
+    "IBM Plex Sans",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  color: #0f172a;
+  background: #0b1220;
+}
+
+[data-testid="map-container"],
+.maplibregl-map,
+.maplibregl-canvas-container,
+.maplibregl-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Keep zoom / compass clear of the top-bar buttons. */
+.maplibregl-ctrl-top-right {
+  top: 56px;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: inherit;
+}
+
+/* 3D scene labels */
+.pv-label {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 14px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.45);
+  will-change: transform;
+}
+.pv-label-area {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: rgba(255, 236, 200, 0.82);
+  font-weight: 600;
+}
+.pv-label-locality {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 10.5px;
+}
+.pv-label-landmark,
+.pv-label-hill,
+.pv-label-station {
+  font-weight: 600;
+}
+.pv-label-tower {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.pv-label .pv-sub {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
+}
+.pv-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f5a524;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  margin-right: 4px;
+  vertical-align: 1px;
+}
+.pv-label-station .pv-dot {
+  background: #a78bfa;
+}
+.pv-label-hill .pv-dot {
+  background: #8bd17c;
+}

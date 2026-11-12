@@ -1,0 +1,50 @@
+{
+  "fixture": true,
+  "version": 1,
+  "city_id": "pune",
+  "note": "Fixture place index for Phase 1 Option 0. Not a marketing neighbourhood list. Not a complete gazetteer.",
+  "places": [
+    {
+      "id": "ward-fixture-a",
+      "name": "Fixture Ward A",
+      "kind": "ward",
+      "source": "wards",
+      "center": [73.8567, 18.5204]
+    },
+    {
+      "id": "ward-fixture-b",
+      "name": "Fixture Ward B",
+      "kind": "ward",
+      "source": "wards",
+      "center": [73.82, 18.54]
+    },
+    {
+      "id": "ward-fixture-c",
+      "name": "Fixture Ward C",
+      "kind": "ward",
+      "source": "wards",
+      "center": [73.89, 18.50]
+    },
+    {
+      "id": "gaz-fixture-1",
+      "name": "Fixture Gazetteer Place 1",
+      "kind": "gazetteer",
+      "source": "gazetteer",
+      "center": [73.8478, 18.529]
+    },
+    {
+      "id": "gaz-fixture-2",
+      "name": "Fixture Gazetteer Place 2",
+      "kind": "gazetteer",
+      "source": "gazetteer",
+      "center": [73.875, 18.505]
+    },
+    {
+      "id": "gaz-fixture-3",
+      "name": "Fixture Gazetteer Place 3",
+      "kind": "gazetteer",
+      "source": "gazetteer",
+      "center": [73.80, 18.56]
+    }
+  ]
+}
