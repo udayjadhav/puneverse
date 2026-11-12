@@ -49,3 +49,4 @@ coverage/
 # Pages) can serve the twin without a paid object store. Re-bake locally with
 # pipeline/bake_scene.py — do NOT commit data/raw or data/processed (still ignored).
 # public/scene/
+docs/screenshots/scene/puneverse-linkedin.mp4

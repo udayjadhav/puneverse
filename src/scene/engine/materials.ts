@@ -99,62 +99,91 @@ varying vec4 vBData;`,
   float pvLit = 0.0;
   vec3 pvLitColor = vec3(1.0, 0.78, 0.48);
   vec3 pvBase = pow(diffuseColor.rgb, vec3(2.2));
+  bool isApt = pvKind > 0.5 && pvKind < 1.5;
   bool isComm = pvKind > 1.5 && pvKind < 2.5;
   bool isInd = pvKind > 2.5 && pvKind < 3.5;
-  bool isPlain = pvKind > 3.5 && pvKind < 4.5 || pvKind > 5.5;
+  bool isCivic = pvKind > 4.5 && pvKind < 5.5;
+  bool isPlain = (pvKind > 3.5 && pvKind < 4.5) || pvKind > 5.5;
+  float seedLo = mod(pvSeed, 256.0);
+  float seedHi = floor(pvSeed / 256.0);
   if (pvPart < 0.5) {
-    float fh = isInd ? 4.5 : ((isComm || (pvKind > 4.5 && pvKind < 5.5)) ? 3.6 : 3.1);
+    float fh = isInd ? 4.5 : ((isComm || isCivic) ? 3.6 : (isApt ? 3.05 : 3.1));
+    // Occasional taller ground floor for shops / stilts (deterministic).
+    float groundBoost = (!isInd && !isPlain && mod(seedLo, 7.0) < 2.0) ? 0.35 : 0.0;
     float vf = vFacade.y / fh;
     float fi = floor(vf);
     float fv = fract(vf);
-    float spacing = isComm ? 2.3 : (2.9 + mod(pvSeed, 4.0) * 0.3);
+    if (fi < 0.5) fv = vFacade.y / (fh + groundBoost);
+    float spacing = isComm ? (2.1 + mod(seedHi, 3.0) * 0.15)
+      : (isApt ? (2.7 + mod(seedLo, 3.0) * 0.2) : (2.85 + mod(seedLo, 5.0) * 0.28));
     float uf = vFacade.x / spacing;
     float wi = floor(uf);
     float fu = fract(uf);
     float fwU = fwidth(uf);
     float fwV = fwidth(vf);
     float detail = 1.0 - smoothstep(0.18, 0.55, max(fwU, fwV));
-    float rnd = pvHash(vec3(pvSeed, fi, wi));
+    float rnd = pvHash(vec3(pvSeed * 0.001 + seedHi, fi, wi));
+    float bayStyle = pvHash(vec3(seedLo * 0.17, wi, seedHi * 0.31));
     float belowRoof = step(fi + 0.5, pvFloors);
-    float hw = isComm ? 0.44 : (0.24 + mod(pvSeed, 3.0) * 0.04);
-    float wy0 = isInd ? 0.55 : 0.30;
-    float wy1 = isInd ? 0.80 : 0.80;
+    float hw = isComm ? (0.38 + mod(seedHi, 3.0) * 0.04)
+      : (isApt ? (0.28 + mod(seedLo, 3.0) * 0.03) : (0.22 + mod(seedLo, 4.0) * 0.035));
+    float wy0 = isInd ? 0.52 : (isApt ? 0.28 : 0.30);
+    float wy1 = isInd ? 0.88 : (0.72 + mod(seedHi, 3.0) * 0.04);
+    // Wider living-room openings on some residential bays.
+    if (!isComm && !isInd && bayStyle > 0.72) { hw = min(0.46, hw + 0.08); wy0 = 0.22; }
     float win = pvBox(fu, 0.5 - hw, 0.5 + hw, fwU * 1.2) * pvBox(fv, wy0, wy1, fwV * 1.2);
-    // Some bays are blank wall or have a balcony recess.
-    float blank = step(0.86, pvHash(vec3(pvSeed * 0.37, wi, 3.0)));
-    win *= belowRoof * (1.0 - blank);
+    // ~12% blank wall, ~18% balcony recess (not a window).
+    float bayRoll = pvHash(vec3(pvSeed * 0.37, wi, 3.0 + seedHi));
+    float blank = step(0.88, bayRoll);
+    float balcony = step(0.70, bayRoll) * (1.0 - blank) * step(0.5, fi) * (isPlain ? 0.0 : 1.0) * (isInd ? 0.0 : 1.0);
+    win *= belowRoof * (1.0 - blank) * (1.0 - balcony);
     if (isPlain) win = 0.0;
     float shop = 0.0;
     float sign = 0.0;
-    bool hasShop = fi < 0.5 && (isComm || (pvKind < 1.5 && mod(pvSeed, 5.0) < 2.0 && pvFloors > 1.5));
+    bool hasShop = fi < 0.5 && (isComm || ((pvKind < 1.5 || isApt) && mod(seedLo, 5.0) < 2.0 && pvFloors > 1.5));
     if (hasShop) {
       win = 0.0;
+      balcony = 0.0;
       shop = pvBox(fu, 0.06, 0.94, fwU) * pvBox(fv, 0.0, 0.70, fwV);
       sign = pvBox(fv, 0.74, 0.96, fwV);
     }
-    // Floor slab edge and sunshade ledge (chajja) above each window row.
-    float slab = 1.0 - pvBox(fv, 0.0, 0.06, fwV) * 0.22;
-    float ledge = pvBox(fv, 0.82, 0.87, fwV);
-    float ledgeShadow = pvBox(fv, 0.80, 0.82, fwV) * 0.0 + pvBox(fv, wy1 - 0.02, 0.82, fwV) * 0.25;
+    float slab = 1.0 - pvBox(fv, 0.0, 0.05, fwV) * 0.28;
+    // Chajja / sunshade band above openings.
+    float ledge = pvBox(fv, wy1 + 0.02, wy1 + 0.09, fwV);
+    float ledgeShadow = pvBox(fv, wy1 - 0.04, wy1 + 0.02, fwV) * 0.35;
     vec3 col = pvBase * 0.92;
-    // Weathering: monsoon streaks, grime at the base.
-    float streak = pvNoise(vec2(vFacade.x * 0.9 + pvSeed, vFacade.y * 0.06));
-    float blotch = pvFbm(vFacade * vec2(0.15, 0.22) + pvSeed);
+    float streak = pvNoise(vec2(vFacade.x * 0.9 + pvSeed * 0.01, vFacade.y * 0.06));
+    float blotch = pvFbm(vFacade * vec2(0.15, 0.22) + vec2(seedLo, seedHi) * 0.05);
     col *= 0.86 + 0.14 * streak;
     col *= 0.92 + 0.12 * blotch;
-    col *= mix(0.72, 1.0, smoothstep(0.0, 2.2, vFacade.y));
+    col *= mix(0.70, 1.0, smoothstep(0.0, 2.4, vFacade.y));
+    // Apartments: slightly cooler / flatter paint; houses: warmer plaster variation.
+    if (isApt) col = mix(col, col * vec3(0.96, 0.97, 1.0), 0.25);
+    if (pvKind < 0.5) col = mix(col, col * vec3(1.04, 1.0, 0.94), 0.18 * blotch);
     col *= mix(1.0, slab, detail);
-    col = mix(col, col * 1.08 + 0.03, ledge * detail * belowRoof * (isPlain ? 0.0 : 1.0));
+    col = mix(col, col * 1.1 + 0.025, ledge * detail * belowRoof * (isPlain ? 0.0 : 1.0));
     col *= 1.0 - ledgeShadow * detail * belowRoof * (isPlain ? 0.0 : 1.0);
+    // Balcony: recessed dark slab + thin railing.
+    float balBody = balcony * pvBox(fu, 0.08, 0.92, fwU) * pvBox(fv, 0.08, 0.92, fwV);
+    float rail = balcony * pvBox(fu, 0.08, 0.92, fwU) * pvBox(fv, 0.78, 0.88, fwV);
+    float railPost = balcony * (
+      pvBox(fu, 0.12, 0.16, fwU) + pvBox(fu, 0.48, 0.52, fwU) + pvBox(fu, 0.84, 0.88, fwU)
+    ) * pvBox(fv, 0.55, 0.88, fwV);
+    col = mix(col, col * 0.55, balBody * detail * 0.85);
+    col = mix(col, vec3(0.55, 0.56, 0.58), rail * detail);
+    col = mix(col, vec3(0.42, 0.43, 0.45), railPost * detail);
+    // Occasional AC / box AC under a window bay.
+    float acRoll = pvHash(vec3(pvSeed * 0.11, wi, fi + 11.0));
+    float ac = step(0.82, acRoll) * (1.0 - blank) * (1.0 - balcony) * step(0.5, fi) * belowRoof * (isPlain || isInd ? 0.0 : 1.0);
+    float acBox = ac * pvBox(fu, 0.62, 0.92, fwU) * pvBox(fv, 0.08, 0.28, fwV);
+    col = mix(col, vec3(0.72, 0.74, 0.76), acBox * detail);
     vec3 glass = mix(vec3(0.07, 0.08, 0.09), vec3(0.20, 0.25, 0.30), rnd);
-    if (isComm) glass = mix(vec3(0.10, 0.16, 0.20), vec3(0.22, 0.32, 0.38), rnd);
-    // Window frame grilles common on Indian homes: darker mullion.
+    if (isComm || isCivic) glass = mix(vec3(0.10, 0.16, 0.20), vec3(0.22, 0.32, 0.38), rnd);
     float grille = pvBox(fu, 0.49, 0.51, fwU) * win;
-    glass = mix(glass, vec3(0.05), grille * 0.6);
-    // Stronger floor/window contrast so near facades read like Mumbai CSMT close-ups.
+    float grilleH = pvBox(fv, 0.54, 0.56, fwV) * win * step(0.55, bayStyle);
+    glass = mix(glass, vec3(0.05), (grille + grilleH) * 0.55);
     col = mix(col, glass, win * detail * 1.15);
-    col *= mix(1.0, 0.9, step(0.02, fv) * step(fv, 0.08) * detail * belowRoof);
-    // Far away the grid averages out instead of shimmering.
+    col *= mix(1.0, 0.88, step(0.02, fv) * step(fv, 0.08) * detail * belowRoof);
     col = mix(col, col * (isPlain ? 1.0 : 0.82), (1.0 - detail) * belowRoof * 0.6);
     vec3 shutter = mix(vec3(0.38, 0.40, 0.42), vec3(0.55, 0.52, 0.45), pvHash(vec3(pvSeed, wi, 9.0)));
     shutter *= 0.85 + 0.15 * step(0.5, fract(fv * 14.0));
@@ -164,24 +193,33 @@ varying vec4 vBData;`,
     col = mix(col, signCol, sign * detail);
     pvBase = col;
     pvRough = mix(0.9, 0.18, win * detail);
-    float on = step(0.58, pvHash(vec3(pvSeed * 1.7 + 3.0, fi, wi)));
-    pvLit = (win * on + shop * 0.6 + sign * 0.9) * belowRoof;
-    pvLitColor = sign > 0.5 ? signCol * 1.4 + 0.2 : (rnd > 0.75 ? vec3(0.85, 0.92, 1.0) : vec3(1.0, 0.76, 0.45));
-    // Distant buildings: average night glow instead of single windows.
-    pvLit = mix(pvLit, 0.22 * (isPlain ? 0.0 : 1.0) * belowRoof, 1.0 - detail);
+    pvRough = mix(pvRough, 0.55, balcony * detail);
+    float on = step(0.62, pvHash(vec3(pvSeed * 1.7 + 3.0, fi, wi)));
+    // Fewer lit windows — avoids the whole city glowing at night.
+    pvLit = (win * on + shop * 0.55 + sign * 0.85 + balcony * 0.12) * belowRoof;
+    pvLitColor = sign > 0.5 ? signCol * 1.25 + 0.15 : (rnd > 0.8 ? vec3(0.85, 0.92, 1.0) : vec3(1.0, 0.78, 0.48));
+    pvLit = mix(pvLit, 0.14 * (isPlain ? 0.0 : 1.0) * belowRoof, 1.0 - detail);
   } else if (pvPart < 1.5) {
     vec2 rp = vFacade;
     float n1 = pvFbm(rp * 0.35);
     float n2 = pvNoise(rp * 2.1);
-    // Keep satellite / tin roof colour vivid (Mumbai Dharavi blue / grey blocks).
     pvBase *= 0.9 + 0.12 * n1;
     pvBase *= 0.94 + 0.08 * n2;
-    // Mild edge darkening only — do not grey-wash coloured roofs.
     pvBase *= 0.96 + 0.04 * smoothstep(0.0, 0.4, length(rp));
-    pvRough = 0.92;
+    // Sparse solar panels on larger roofs (paint only — disclosed as generated).
+    float solarChance = pvHash(vec3(pvSeed * 0.02, floor(rp.x * 0.08), floor(rp.y * 0.08)));
+    float panel = step(0.72, solarChance) * step(8.0, pvFloors) * (isPlain ? 0.0 : 1.0);
+    vec2 cell = fract(rp * 0.55);
+    float panelMask = panel * pvBox(cell.x, 0.12, 0.88, fwidth(cell.x) * 2.0) * pvBox(cell.y, 0.18, 0.82, fwidth(cell.y) * 2.0);
+    float grid = panel * (pvBox(cell.x, 0.48, 0.52, fwidth(cell.x)) + pvBox(cell.y, 0.48, 0.52, fwidth(cell.y)));
+    vec3 solarCol = vec3(0.08, 0.12, 0.22);
+    pvBase = mix(pvBase, solarCol, panelMask * 0.85);
+    pvBase = mix(pvBase, vec3(0.15, 0.18, 0.28), grid * 0.5);
+    pvRough = mix(0.92, 0.35, panelMask);
   } else {
-    // Plain side wall without window grid — keep bake wall tint.
-    pvBase *= 0.82;
+    // Parapet inner face — slightly lighter coping edge via facade.y.
+    float cope = smoothstep(0.0, 0.35, fract(vFacade.y * 2.0));
+    pvBase *= 0.78 + 0.08 * cope;
   }
   diffuseColor.rgb = pvBase;`,
       )
@@ -193,10 +231,10 @@ varying vec4 vBData;`,
       .replace(
         "#include <emissivemap_fragment>",
         `#include <emissivemap_fragment>
-  totalEmissiveRadiance += pvLitColor * pvLit * uNight * 1.6;`,
+  totalEmissiveRadiance += pvLitColor * pvLit * uNight * 1.15;`,
       );
   };
-  m.customProgramCacheKey = () => "pv-building";
+  m.customProgramCacheKey = () => "pv-building-v2";
   return m;
 }
 
@@ -214,8 +252,16 @@ export function makeTerrainMaterial(map: Texture): MeshStandardMaterial {
     float d1 = pvFbm(wp * 0.08);
     float d2 = pvNoise(wp * 0.9);
     float d3 = pvNoise(wp * 4.0);
+    // Soft micro-relief — keep DEM elevation honest; this is albedo only.
     diffuseColor.rgb *= 0.86 + 0.2 * d1;
     diffuseColor.rgb *= 0.95 + 0.07 * d2 + 0.04 * d3;
+    // Slight greener pockets where Sentinel is already dark (veg / water margins).
+    float luma = dot(diffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+    float veg = smoothstep(0.18, 0.42, luma) * (1.0 - smoothstep(0.45, 0.72, luma));
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.92, 1.06, 0.90), veg * 0.22 * d1);
+    // Contact darkening near buildings (world Y is elev − base; low = valley floors).
+    float contact = smoothstep(0.0, 35.0, abs(vPvWorld.y));
+    diffuseColor.rgb *= mix(0.88, 1.0, contact);
   }`,
     );
   };

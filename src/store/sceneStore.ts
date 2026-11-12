@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { LandmarkContent } from "@/scene/landmarks/content";
 import type { PickedBuilding, Preset, SceneManifest } from "@/scene/types";
 
 export type DetailLevel = "low" | "medium" | "high" | "ultra";
@@ -17,6 +18,12 @@ export interface Readout {
   eye: number;
 }
 
+export interface SelectedPlace {
+  label: string;
+  kind: string;
+  content: LandmarkContent | null;
+}
+
 interface SceneStore {
   view: ViewKind;
   manifest: SceneManifest | null;
@@ -28,8 +35,11 @@ interface SceneStore {
   detail: DetailLevel;
   labels: boolean;
   aboutOpen: boolean;
+  /** Developer-only: height provenance / confidence inspection. Off by default. */
+  dataQualityMode: boolean;
   readout: Readout | null;
   hover: { info: PickedBuilding; x: number; y: number } | null;
+  selectedPlace: SelectedPlace | null;
   fps: number;
   /** Set by UI, consumed (and cleared) by the engine. */
   flyTo: Preset | null;
@@ -43,8 +53,12 @@ interface SceneStore {
   setDetail: (d: DetailLevel) => void;
   toggleLabels: () => void;
   setAboutOpen: (o: boolean) => void;
+  setDataQualityMode: (on: boolean) => void;
+  toggleDataQualityMode: () => void;
   setReadout: (r: Readout) => void;
   setHover: (h: SceneStore["hover"]) => void;
+  setSelectedPlace: (p: SelectedPlace | null) => void;
+  clearSelectedPlace: () => void;
   setFps: (f: number) => void;
   requestFlyTo: (p: Preset | null) => void;
 }
@@ -66,8 +80,10 @@ export const useSceneStore = create<SceneStore>((set) => ({
   detail: "high",
   labels: true,
   aboutOpen: false,
+  dataQualityMode: false,
   readout: null,
   hover: null,
+  selectedPlace: null,
   fps: 0,
   flyTo: null,
   setView: (view) => set({ view }),
@@ -81,8 +97,12 @@ export const useSceneStore = create<SceneStore>((set) => ({
   setDetail: (detail) => set({ detail }),
   toggleLabels: () => set((s) => ({ labels: !s.labels })),
   setAboutOpen: (aboutOpen) => set({ aboutOpen }),
+  setDataQualityMode: (dataQualityMode) => set({ dataQualityMode }),
+  toggleDataQualityMode: () => set((s) => ({ dataQualityMode: !s.dataQualityMode })),
   setReadout: (readout) => set({ readout }),
   setHover: (hover) => set({ hover }),
+  setSelectedPlace: (selectedPlace) => set({ selectedPlace }),
+  clearSelectedPlace: () => set({ selectedPlace: null }),
   setFps: (fps) => set({ fps }),
   requestFlyTo: (flyTo) => set({ flyTo }),
 }));

@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "PuneVerse Phase 1 — interactive map of Pune & Pimpri-Chinchwad (SHIP HOLD)",
+  "description": "PuneVerse — interactive 3D digital twin of Pune (open data, free hosting)",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -16,6 +16,7 @@
   "dependencies": {
     "maplibre-gl": "^6.17.0",
     "pmtiles": "^4.5.0",
+    "posthog-js": "^1.447.12",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "three": "^0.187.0",

@@ -137,6 +137,7 @@ describe("BottomBar", () => {
     expect(chips).toHaveLength(3);
     click(chips[1]);
     expect(useSceneStore.getState().flyTo?.label).toBe("Pune Station");
+    expect(useSceneStore.getState().selectedPlace?.label).toBe("Pune Station");
   });
 
   it("time preset buttons set timeOfDay and update the readout", () => {

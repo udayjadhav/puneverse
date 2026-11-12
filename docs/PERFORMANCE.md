@@ -1,20 +1,31 @@
-# Performance — Stage 2 PoC (S0 center, measured 2026-11-11)
+# Performance — 3D scene
 
-Dev build (`vite`), Chromium in Cursor's browser, viewport 696×707, terrain + all layers on, 3D mode.
+Measure **frame time / FPS** in a focused window. MapLibre `redraw()` CPU ms alone is not a substitute for WebGL FPS.
 
-| View | Camera | Buildings rendered | CPU ms per `map.redraw()` | JS heap |
-|---|---|---|---|---|
-| City | z13.3, pitch 55 | 43,374 | 0.78 | 63 MB |
-| Neighbourhood | z16.1, pitch 62 | 5,967 | 1.23 | 104 MB |
-| Close-up | z17.4, pitch 63 | 939 | 1.14 | 126 MB |
+## What to measure
 
-CPU time per redraw only (GPU work is asynchronous and not included). A true frame rate could not be measured: the browser tab had no focus, so `requestAnimationFrame` was throttled to about 1 frame per second. Re-measure in a focused window.
+| Metric | How |
+|--------|-----|
+| FPS / frame time | On-screen FPS in the scene chrome (`sceneStore.fps`) |
+| Chunks resident | `SceneEngine.stats().chunks` |
+| Draw calls / triangles | `renderer.info` via `SceneEngine.stats()` |
+| Geometries / textures | `stats().geometries`, `stats().textures` |
+| Transfer | Network panel for `/scene/s0/chunks/*` |
 
-| Network (one session, three views) | Requests | Transferred |
-|---|---|---|
-| buildings.pmtiles | 30 | 3.5 MB |
-| roads.pmtiles | 31 | 0.29 MB |
-| context.pmtiles | 38 | 0.07 MB |
-| Terrain tiles (AWS) | 84 | not reported (cross-origin timing) |
+## Design constraints
 
-Archive sizes: buildings 8.4 MB, roads 0.89 MB, context 0.24 MB, trees JSON 41 KB. three.js loads lazily with the trees layer.
+- Stream chunks by camera; evict outside radius (`DETAIL.*.streamRadius` / `maxChunks`)
+- Do not keep the whole city on the GPU
+- Device detail: Low / Medium / High / Ultra
+- Dispose path must terminate workers, evict chunks, clear trees/traffic, dispose meshes
+
+## Views to check
+
+1. City oblique (launch pose)
+2. Neighbourhood (~1 km)
+3. Street / landmark close-up
+4. Long session with repeated fly-tos (watch memory)
+
+## Historical note
+
+Earlier Stage-2 MapLibre S0 measurements (2026-11-11) applied to the 2D PMTiles PoC only. Re-baseline after intentional 3D publishes; do not cite those numbers as current 3D FPS.

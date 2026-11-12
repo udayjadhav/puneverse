@@ -92,15 +92,15 @@
     }
   },
   "honesty": {
-    "day_night": "Day/night is a lighting (basemap style) switch only — not a time-of-day simulation of the city.",
-    "heights": "Building heights are not invented. A building is raised in 3D only when OpenStreetMap gives its height (exact) or its number of floors (an estimate: floors × the floor height shown below). Overture Maps adds many more footprints (from Google Open Buildings and Microsoft ML Buildings) but no extra heights for this area, so those footprints are drawn flat. Most buildings in the center area are therefore flat.",
-    "extent": "Map extent is intended for urban Pune Municipal Corporation (PMC) and Pimpri-Chinchwad Municipal Corporation (PCMC), with cantonments in scope. S0 center tiles are a ~±0.025° bbox around city center — not full PMC/PCMC. SAMPLE admin polygons are illustrative twin-city urban extent, not official wards.",
-    "search_limits": "Place search uses a small fixture index (wards + gazetteer shaped). It is not a complete neighbourhood or POI directory.",
-    "ship_hold": "SHIP HOLD — center-area buildings, roads, water, parks, rail and metro are real OpenStreetMap / Overture Maps data (local bake of a small center box). Admin boundaries are SAMPLE only. Full PMC and PCMC coverage is not built yet. Do not treat as a production release.",
-    "attribution": "Map data © OpenStreetMap contributors (ODbL). Extra building footprints © Overture Maps Foundation (ODbL), including Google Open Buildings (CC BY 4.0) and Microsoft Global ML Building Footprints (ODbL). Terrain: Terrain Tiles on AWS Open Data (Mapzen; SRTM and others). Basemap styles via OpenFreeMap / MapLibre demo tiles where used. SAMPLE admin is hand-authored illustrative geometry.",
-    "camera": "The map opens in 3D: tilted about 58° so raised buildings are visible. Use the Flat button for a straight-down view (no tilt, no raised buildings). Reset view returns to the city center in the current mode. Right-drag or Ctrl-drag to rotate and tilt.",
-    "terrain": "Hills come from a public elevation model (about 30 m detail), shown at true scale (no vertical exaggeration). Small slopes in the city are subtle.",
-    "trees": "Tree markers are only trees surveyed one by one in OpenStreetMap (natural=tree). Woods and parks are shown as green areas, not as individual trees."
+    "day_night": "In the 3D scene, time of day drives sun, sky, fog and window lights (IST). In the optional 2D MapLibre view, day/night is only a basemap style switch.",
+    "heights": "3D scene: every footprint is raised. Height sources are labelled — mapped OSM/Overture height, floors×3 m, calibrated GlobalBuildingAtlas satellite estimate, GHSL 100 m area estimate, or typed default. Estimates are never called measured. Optional 2D MapLibre extrusions still use only OSM height/floors (others stay flat).",
+    "extent": "3D bake covers roughly Sinhgad–Wagholi (see scene manifest extent_lonlat). It is not a verified full PMC∪PCMC product. Optional 2D PMTiles (if present locally) use a smaller center bbox in buildings.baked_bbox. SAMPLE admin polygons are illustrative, not official wards.",
+    "search_limits": "3D presets fly to named places from the bake. Fixture place search on the 2D map is a small demo index — not a complete POI directory.",
+    "ship_hold": "Public 3D twin is a free open-data exploration build. Admin boundaries remain SAMPLE. Do not treat as an official municipal product. Full PMC/PCMC verification is not claimed.",
+    "attribution": "Map data © OpenStreetMap contributors (ODbL). Building footprints © Overture Maps Foundation (ODbL), including Google Open Buildings (CC BY 4.0) and Microsoft Global ML Building Footprints (ODbL). Heights: OSM tags, GlobalBuildingAtlas, GHSL where labelled. Terrain: Copernicus DEM GLO-30. Ground: Sentinel-2. Trees in the 3D scene: WorldCover-driven placement (not surveyed stems). 2D basemap: OpenFreeMap / MapLibre demo. SAMPLE admin is illustrative geometry.",
+    "camera": "Default view is the Three.js 3D twin. Use “2D map” for MapLibre. Flat/reset controls on the 2D map tilt buildings for OSM-known heights only.",
+    "terrain": "3D hills use Copernicus DEM (~30 m). 2D map terrain (if enabled) uses public terrarium tiles at true scale.",
+    "trees": "3D scene trees are generated from WorldCover candidates (not individual surveyed trees). On the 2D map, tree markers are OSM natural=tree only."
   },
   "attribution": {
     "osm": "© OpenStreetMap contributors",

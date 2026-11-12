@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ErrorEvent, Map as MapLibreMap } from "maplibre-gl";
+import { noteMeaningfulInteraction, PV_EVENTS, track } from "@/analytics";
 import { getDefaultCityConfig } from "@/config/loadCityConfig";
 import { resolveBasemapUrl } from "./basemap";
 import { hideBasemapFillExtrusions, hideBasemapPois } from "./hideBasemapExtrusions";
@@ -139,6 +140,17 @@ export function MapView() {
           const s = useMapStore.getState();
           s.selectBuilding(info);
           s.setTooltip(info ? { info, ...point, pinned: true } : null);
+          if (info) {
+            noteMeaningfulInteraction();
+            track(PV_EVENTS.building_selected, {
+              view: "map",
+              source: "map",
+              building_name: info.name ?? null,
+              building_type: info.buildingType ?? undefined,
+              building_height_m: info.heightM ?? undefined,
+              height_source: info.heightSource,
+            });
+          }
         },
         (info, point) => {
           const s = useMapStore.getState();

@@ -138,8 +138,8 @@ export function SceneAbout() {
         <Section title="What is generated">
           <p>These are made up to make the city look alive. They are not data:</p>
           <ul className="list-disc space-y-0.5 pl-4">
-            <li>Window and facade patterns.</li>
-            <li>Rooftop water tanks and stair heads.</li>
+            <li>Window, balcony, chajja and shopfront patterns.</li>
+            <li>Rooftop water tanks, stair heads and painted solar panels.</li>
             <li>Tree shapes.</li>
             <li>Water waves.</li>
             <li>Vehicles and traffic.</li>
@@ -167,9 +167,16 @@ export function SceneAbout() {
               )}
               ; only nearby building chunks stay on the GPU.
             </li>
-            <li>Most heights are estimates.</li>
-            <li>Generated details are not real.</li>
+            <li>
+              Most heights are <em>estimates</em> (satellite / area / floors / default) — never presented as surveyed
+              measurements unless the source is mapped.
+            </li>
+            <li>Generated details (windows, tanks, traffic) are not real.</li>
             <li>There are no building interiors.</li>
+            <li>
+              Developers: press <kbd className="rounded bg-white/10 px-1">Shift+D</kbd> for data-quality mode
+              (provenance + confidence on hover).
+            </li>
           </ul>
         </Section>
 

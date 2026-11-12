@@ -18,6 +18,7 @@ import {
   HalfFloatType,
   HemisphereLight,
   InstancedMesh,
+  MathUtils,
   Matrix4,
   Mesh,
   MeshStandardMaterial,
@@ -71,6 +72,7 @@ import { TerrainSampler, type TerrainMeta } from "./terrainSampler";
 import { TrafficSystem, type RoadNetwork } from "./traffic";
 import { TreeSystem } from "./trees";
 import { chunkKey, selectResidentChunks } from "./stream";
+import { attachClickGesture, type ClickGesture } from "@/analytics/clickDetect";
 import { HEIGHT_SOURCES, KIND_NAMES, type ChunkInfo, type PickedBuilding, type Preset, type SceneManifest } from "../types";
 
 export type Detail = "low" | "medium" | "high" | "ultra";
@@ -102,7 +104,11 @@ export interface EngineEvents {
   error: (e: string) => void;
   readout: (r: { place: string; lat: number; lon: number; eye: number }) => void;
   hover: (h: { info: PickedBuilding; x: number; y: number } | null) => void;
+  /** Intentional click/tap on a building (not hover, not camera drag). */
+  select?: (info: PickedBuilding) => void;
   fps: (f: number) => void;
+  /** Throttled camera pose for analytics — not every frame. */
+  cameraSample?: (s: { dist: number; pitch: number }) => void;
 }
 
 interface ChunkRecord {
@@ -143,6 +149,7 @@ const FLY_VIEW: Record<string, { dist: number; pitch: number; bearing: number }>
   Deccan: { dist: 1000, pitch: 15, bearing: 100 },
   Swargate: { dist: 1100, pitch: 15, bearing: 10 },
   "Jawaharlal Nehru Cricket Stadium": { dist: 900, pitch: 14, bearing: 35 },
+  "Nehru Stadium": { dist: 900, pitch: 14, bearing: 35 },
   Sarasbaug: { dist: 900, pitch: 14, bearing: 40 },
 };
 
@@ -182,12 +189,16 @@ export class SceneEngine {
   private frames = 0;
   private fpsT = 0;
   private hoverT = 0;
+  private cameraSampleT = 0;
   private pointer: { x: number; y: number; dirty: boolean } | null = null;
+  private clickGesture: ClickGesture | null = null;
   private manifest: SceneManifest | null = null;
   private chunkCatalog: ChunkInfo[] = [];
   private chunkSize = 1000;
   private loadingKeys = new Set<string>();
   private streamBusy = false;
+  /** Camera moved while a sync was in flight — run again when free. */
+  private streamPending = false;
   private lastStreamCam = new Vector3(1e9, 0, 0);
   private treesDirty = false;
   private buildingMat = makeBuildingMaterial(this.u);
@@ -260,6 +271,12 @@ export class SceneEngine {
 
     this.renderer.domElement.addEventListener("pointermove", this.onPointer);
     this.renderer.domElement.addEventListener("pointerleave", this.onLeave);
+    this.clickGesture = attachClickGesture(this.renderer.domElement, (e) => {
+      if (this.disposed || this.rig.flying) return;
+      const r = this.renderer.domElement.getBoundingClientRect();
+      const info = this.pickAt(e.clientX - r.left, e.clientY - r.top);
+      if (info) this.ev.select?.(info);
+    });
     this.resizeObs = new ResizeObserver(() => this.resize());
     this.resizeObs.observe(container);
     this.resize();
@@ -274,20 +291,36 @@ export class SceneEngine {
   private work<T>(msg: Record<string, unknown>, w: number): Promise<T> {
     const id = ++this.reqId;
     return new Promise<T>((resolve, reject) => {
+      if (this.disposed || this.workers.length === 0) {
+        reject(new Error("Scene engine disposed"));
+        return;
+      }
       this.pending.set(id, (d) => {
         const r = d as { error?: string };
         if (r.error) reject(new Error(r.error));
         else resolve(d as T);
       });
-      this.workers[w % this.workers.length].postMessage({ ...msg, id });
+      const worker = this.workers[w % this.workers.length];
+      if (!worker) {
+        this.pending.delete(id);
+        reject(new Error("Scene worker unavailable"));
+        return;
+      }
+      worker.postMessage({ ...msg, id });
     });
+  }
+
+  private assertAlive(): void {
+    if (this.disposed) throw new Error("Scene engine disposed");
   }
 
   async load(): Promise<void> {
     try {
       const res = await fetch(`${SCENE_URL}/manifest.json`);
+      this.assertAlive();
       if (!res.ok) throw new Error(`Scene not baked yet (manifest HTTP ${res.status}). Run pipeline/bake_scene.py.`);
       const m = (await res.json()) as SceneManifest;
+      this.assertAlive();
       this.manifest = m;
       this.ev.manifest(m);
       this.ev.stage("manifest");
@@ -298,6 +331,7 @@ export class SceneEngine {
         this.loadTexture(`${SCENE_URL}/ground.jpg`),
         this.loadTexture(`${SCENE_URL}/outer.jpg`).catch(() => null),
       ]);
+      this.assertAlive();
       this.terrain = new TerrainSampler(terr.meta, terr.arrays.height as Float32Array);
       this.addTerrain(terr.meta, terr.arrays.height as Float32Array, ground, false);
       if (outer && outerTex) this.addTerrain(outer.meta, outer.arrays.height as Float32Array, outerTex, true);
@@ -305,10 +339,13 @@ export class SceneEngine {
       this.ev.stage("imagery");
 
       const water = await fetchPVB(`${SCENE_URL}/water.bin`);
+      this.assertAlive();
       this.addWater(water.arrays.position as Float32Array);
       await this.addStadiums();
+      this.assertAlive();
 
       const net = await this.work<NetworkResult>({ type: "network", roadsUrl: `${SCENE_URL}/roads.bin`, railUrl: `${SCENE_URL}/rail.bin` }, 0);
+      this.assertAlive();
       this.addNetwork(net);
       this.ev.stage("network");
 
@@ -318,21 +355,31 @@ export class SceneEngine {
       this.addLabels(m);
       this.applyDetail(this.detail);
       await this.syncChunks(true);
+      this.assertAlive();
       this.ev.stage("buildings");
       this.ev.stage("trees");
       this.ev.stage("lighting");
       this.ev.ready();
     } catch (e) {
-      this.ev.error(String((e as Error).message ?? e));
+      // React Strict Mode remounts dispose the first engine mid-load; ignore that race.
+      if (this.disposed) return;
+      const msg = String((e as Error).message ?? e);
+      if (msg.includes("disposed") || msg.includes("worker unavailable")) return;
+      this.ev.error(msg);
     }
   }
 
   /** Load / unload building chunks around the camera within the detail budget. */
   private async syncChunks(force = false) {
-    if (!this.manifest || this.disposed || this.streamBusy) return;
+    if (!this.manifest || this.disposed) return;
+    if (this.streamBusy) {
+      this.streamPending = true;
+      return;
+    }
     const worldMoved = this.camera.position.distanceTo(this.lastStreamCam) > 220;
-    if (!force && !worldMoved) return;
+    if (!force && !worldMoved && !this.streamPending) return;
     this.streamBusy = true;
+    this.streamPending = false;
     try {
       const cam = fromWorld(this.camera.position);
       const cfg = DETAIL[this.detail];
@@ -351,7 +398,11 @@ export class SceneEngine {
           this.loadingKeys.add(key);
           try {
             const r = await this.work<ChunkResult>(
-              { type: "chunk", url: `${SCENE_URL}/chunks/c_${c.ix}_${c.iy}.bin`, parapets: true },
+              {
+                type: "chunk",
+                url: `${SCENE_URL}/chunks/c_${c.ix}_${c.iy}.bin`,
+                parapets: this.detail !== "low",
+              },
               i,
             );
             if (this.disposed || !wantKeys.has(key)) return;
@@ -366,6 +417,7 @@ export class SceneEngine {
       this.lastStreamCam.copy(this.camera.position);
     } finally {
       this.streamBusy = false;
+      if (this.streamPending && !this.disposed) void this.syncChunks(true);
     }
   }
 
@@ -701,34 +753,35 @@ export class SceneEngine {
     const az = (s.azimuth * Math.PI) / 180;
     const dir = new Vector3(Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el));
     this.sunDir.copy(dir);
-    // Mumbai-like: soft haze, muted Midday (never blown-out), warm low sun.
+    // Soft haze, muted Midday (never blown-out), warm golden-hour sun.
     const noon = Math.max(0, Math.min(1, (s.elevation - 10) / 55));
+    const low = Math.max(0, 1 - Math.max(0, s.elevation) / 25);
     for (const sk of [this.sky, this.envSky]) {
       const su = sk.material.uniforms;
       su.sunPosition.value.copy(dir.y < -0.05 ? new Vector3(dir.x, -0.05, dir.z) : dir);
-      su.turbidity.value = 8 + noon * 4;
-      su.rayleigh.value = 1.1 + (1 - day) * 1.4 + noon * 0.4;
-      su.mieCoefficient.value = 0.0045 + noon * 0.003;
-      su.mieDirectionalG.value = 0.8;
+      su.turbidity.value = 6.5 + noon * 3.5 + low * 2.5;
+      su.rayleigh.value = 1.05 + (1 - day) * 1.15 + noon * 0.25 + low * 0.35;
+      su.mieCoefficient.value = 0.004 + noon * 0.0025 + low * 0.002;
+      su.mieDirectionalG.value = 0.78 + low * 0.06;
     }
-    const low = Math.max(0, 1 - Math.max(0, s.elevation) / 25);
-    const sunCol = new Color(1, 0.94, 0.86).lerp(new Color(1, 0.58, 0.28), low * 0.9);
+    const sunCol = new Color(1, 0.95, 0.88).lerp(new Color(1, 0.55, 0.26), low * 0.92);
     this.sun.color.copy(sunCol);
-    // Cap Midday hard — Mumbai reference stays muted sand, never blown white.
-    this.sun.intensity = (0.95 + 0.45 * day) * (1 - 0.38 * noon);
-    this.hemi.intensity = 0.08 + 0.22 * day * (1 - 0.25 * noon);
-    this.hemi.color.set(day > 0.3 ? 0xb8c2d0 : 0x3a4a6a);
-    this.hemi.groundColor.set(day > 0.3 ? 0x5e5040 : 0x1a1612);
-    const fogDay = new Color(0.62, 0.68, 0.74).lerp(new Color(0.88, 0.68, 0.48), low * day * 0.75);
-    const fogNight = new Color(0.02, 0.03, 0.05);
+    // Cap Midday hard — keep sand tones, never blown white.
+    this.sun.intensity = (1.0 + 0.4 * day) * (1 - 0.42 * noon) * (0.85 + 0.15 * (1 - night));
+    this.hemi.intensity = 0.1 + 0.2 * day * (1 - 0.28 * noon);
+    this.hemi.color.set(day > 0.3 ? 0xb6c0ce : 0x2c3a55);
+    this.hemi.groundColor.set(day > 0.3 ? 0x5a4c3c : 0x121018);
+    const fogDay = new Color(0.64, 0.7, 0.76).lerp(new Color(0.9, 0.66, 0.44), low * day * 0.8);
+    const fogNight = new Color(0.015, 0.02, 0.035);
     (this.scene.fog as FogExp2).color.copy(fogNight.lerp(fogDay, day));
-    (this.scene.fog as FogExp2).density = 0.000085 + noon * 0.00005 + night * 0.000025;
-    this.renderer.toneMappingExposure = 0.58 + 0.1 * day * (1 - 0.45 * noon) + 0.28 * night;
+    // Atmospheric depth: mild midday haze; clearer night so selective windows read.
+    (this.scene.fog as FogExp2).density = 0.00007 + noon * 0.000055 + night * 0.000012 + low * 0.00002;
+    this.renderer.toneMappingExposure = 0.56 + 0.12 * day * (1 - 0.5 * noon) + 0.1 * night;
     this.envNoon = noon;
-    this.bloom.strength = 0.06 + night * 0.85;
-    this.bloom.threshold = night > 0.5 ? 0.55 : 1.05;
+    // Subtle night bloom — avoid sky/lamp wash.
+    this.bloom.strength = 0.05 + night * 0.42 + low * day * 0.08;
+    this.bloom.threshold = night > 0.45 ? 0.72 : 1.08;
     this.sky.visible = true;
-    (this.sky.material.uniforms as Record<string, { value: number }>).up && void 0;
     if (Math.abs(this.envHour - hour) > 0.2) this.updateEnv();
     else this.applyEnvIntensity();
   }
@@ -763,7 +816,19 @@ export class SceneEngine {
     this.trees.setNearRadius(cfg.nearTrees);
     this.trees.castShadows = cfg.shadow > 0;
     if (this.network && (!this.traffic || this.traffic.count !== cfg.traffic)) {
-      if (this.traffic) this.scene.remove(this.traffic.group);
+      if (this.traffic) {
+        this.scene.remove(this.traffic.group);
+        this.traffic.group.traverse((o) => {
+          const m = o as Mesh;
+          if (m.isMesh) {
+            m.geometry?.dispose();
+            const mat = m.material;
+            if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+            else (mat as { dispose?: () => void } | undefined)?.dispose?.();
+          }
+        });
+        this.traffic = null;
+      }
       this.traffic = new TrafficSystem(this.network, this.u, cfg.traffic);
       this.scene.add(this.traffic.group);
     }
@@ -896,6 +961,15 @@ export class SceneEngine {
       const info = this.pickAt(this.pointer.x, this.pointer.y);
       this.ev.hover(info ? { info, x: this.pointer.x, y: this.pointer.y } : null);
     }
+    if (now - this.cameraSampleT > 12_000) {
+      this.cameraSampleT = now;
+      const cam = this.camera.position;
+      const tgt = this.rig.controls.target;
+      const horiz = Math.hypot(cam.x - tgt.x, cam.z - tgt.z);
+      const dist = Math.hypot(horiz, cam.y - tgt.y);
+      const pitchDeg = MathUtils.radToDeg(Math.atan2(cam.y - tgt.y, Math.max(horiz, 1)));
+      this.ev.cameraSample?.({ dist, pitch: pitchDeg });
+    }
   };
 
   private emitReadout() {
@@ -940,15 +1014,51 @@ export class SceneEngine {
 
   dispose() {
     this.disposed = true;
+    this.streamPending = false;
     cancelAnimationFrame(this.raf);
     this.resizeObs.disconnect();
     this.renderer.domElement.removeEventListener("pointermove", this.onPointer);
     this.renderer.domElement.removeEventListener("pointerleave", this.onLeave);
+    this.clickGesture?.dispose();
+    this.clickGesture = null;
     for (const w of this.workers) w.terminate();
+    this.workers = [];
+    for (const rec of [...this.chunkMap.values()]) this.evictChunk(rec);
+    this.chunkMap.clear();
+    this.builtList = [];
+    this.trees.clear();
+    if (this.traffic) {
+      this.scene.remove(this.traffic.group);
+      this.traffic.group.traverse((o) => {
+        const m = o as Mesh;
+        if (m.isMesh) {
+          m.geometry?.dispose();
+          const mat = m.material;
+          if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+          else (mat as { dispose?: () => void } | undefined)?.dispose?.();
+        }
+      });
+      this.traffic = null;
+    }
+    this.scene.traverse((o) => {
+      const m = o as Mesh;
+      if (m.isMesh) {
+        m.geometry?.dispose();
+        const mat = m.material;
+        if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+        else (mat as { dispose?: () => void } | undefined)?.dispose?.();
+      }
+    });
+    while (this.scene.children.length) this.scene.remove(this.scene.children[0]);
     this.rig.dispose();
     this.labels.dispose();
     this.composer.dispose();
     this.pmrem.dispose();
+    if (this.envTarget) {
+      this.envTarget.dispose();
+      this.envTarget = null;
+    }
+    this.sun.shadow.map?.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }

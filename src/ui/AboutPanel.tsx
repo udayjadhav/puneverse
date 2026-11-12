@@ -65,7 +65,7 @@ export function AboutPanel() {
         <div className="mb-3 flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold tracking-wide text-amber-300 uppercase">
-              SHIP HOLD
+              Open-data exploration
             </p>
             <h2 id="about-title" className="text-lg font-semibold">
               About PuneVerse

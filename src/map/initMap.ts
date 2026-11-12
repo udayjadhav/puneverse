@@ -24,7 +24,7 @@ export function buildMapOptions(
     maxBounds: city.maxBounds,
     attributionControl: {
       compact: true,
-      customAttribution: `${city.attribution.osm} · PuneVerse (SHIP HOLD)`,
+      customAttribution: `${city.attribution.osm} · PuneVerse (open data)`,
     },
   };
 }

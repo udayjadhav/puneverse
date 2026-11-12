@@ -1,43 +1,39 @@
-# Product requirements — Phase 1 Option 0 (S0 center)
+# Product requirements — PuneVerse 3D twin
 
-**Status: SHIP HOLD**
+**Status:** Public exploration build (open data). Not an official municipal product.
 
 ## Goal
 
-Ship a honest, local-runnable map for Pune & Pimpri-Chinchwad with real S0 center buildings/roads tiles, clear SAMPLE/stub labels, and disclosures before claiming city-wide production data.
+A trustworthy, recognisable, interactive **3D digital city of Pune** that ordinary people enjoy exploring — grounded in open geospatial data with honest height provenance.
 
-## In scope (current)
+## Primary experience (current)
 
-1. Vite + React + TypeScript map app with MapLibre
-2. City config G0 locked in `config/cities/pune.json`
-3. Free open basemap (no paid cloud)
-4. Layer toggles with honest UI copy (stub vs SAMPLE vs ready)
-5. Fixture place search (wards + gazetteer shaped)
-6. Day/night lighting style swap
-7. About / honesty panel
-8. Docs that match runtime reality
-9. CI: lint, typecheck, test, build
-10. **S0 center ready** — buildings + roads PMTiles from local tippecanoe **v2.79.0** bake (Geofabrik western-zone clip)
-11. Provenanced extrusion only (`osm_explicit` / `osm_levels_estimate`); never invent heights
-12. Fail-closed UI when gitignored PMTiles are missing or protocol registration fails
-13. Admin remains **SAMPLE** GeoJSON; water/parks remain **stub**
-14. SAMPLE road spokes removed (not shipped)
+1. **Three.js WebGL twin** — default view (`src/scene/`)
+2. Chunk-streamed buildings (~468k), terrain, water, roads/bridges, rail, trees, traffic
+3. Time-of-day (IST) + place fly-to presets
+4. Height sources labelled (mapped / floors / satellite / area / default) — estimates never called measured
+5. Developer **data-quality mode** (Shift+D) for provenance on hover
+6. About panel with sources, validation stats, generated-vs-real disclosure
+7. Optional **2D MapLibre** view for basemap / PMTiles (when tiles present locally)
+8. Free hosting (GitHub Pages) — no paid APIs required
 
-## Out of scope (this milestone)
+## Out of scope (until higher priorities are solid)
 
-- Creating Cloudflare R2 or Pages projects
-- Overpass live queries
-- Fabricated building heights or non-metre unit conversion
-- Marketing neighbourhood “cool lists” as search data
-- Claiming production readiness / lifting SHIP HOLD
-- Full PMC ∪ PCMC overlays (S1/S2)
-- Water / parks geometry
-- Official admin / ward boundaries
+- Cesium migration
+- Fabricated building names or fake “surveyed” heights
+- Speculative historical reconstructions without sources
+- Live traffic / unofficial metro as if approved
+- Paid cloud datasets without explicit approval
+- Claiming verified full PMC ∪ PCMC coverage
 
-## Success criteria (current)
+## Success criteria
 
-- `npm install && npm test && npm run typecheck && npm run lint && npm run build` pass
+- `npm test && npm run typecheck && npm run lint && npm run build` pass
 - `python3 -m pytest pipeline/ -q` pass
-- After `pipeline/bake_center.py`, `npm run dev` shows S0 buildings/roads; without bake, honesty banner appears
-- SHIP HOLD visible in README and UI; SAMPLE admin labeled clearly
-- tippecanoe documented as **in use** (v2.79.0), not deferred
+- Local `npm run dev` loads `public/scene/s0/manifest.json` and streams chunks
+- Docs / About / city honesty describe the **same** product (3D-first)
+- Deployed Pages assets match local bake when intentionally published
+
+## Evolution roadmap (dependency order)
+
+See engineering master prompt workstreams: integrity → building confidence & landmarks → historical → simulations.

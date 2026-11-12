@@ -1,0 +1,114 @@
+{
+  "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4 Pro, Unspecified Version)",
+  "loadMs": 2277,
+  "views": {
+    "01-launch": {
+      "fps": 28.9,
+      "heapMB": 333,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Shaniwar Peth · Pune",
+        "lat": 18.520857100439613,
+        "lon": 73.85198286442517,
+        "eye": 947.5757580145134
+      }
+    },
+    "02-neighbourhood": {
+      "fps": 37.1,
+      "heapMB": 339,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Shaniwar Peth · Pune",
+        "lat": 18.517238165933982,
+        "lon": 73.85387838550687,
+        "eye": 325.88328475421474
+      }
+    },
+    "03-street-facade": {
+      "fps": 50.4,
+      "heapMB": 337,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Shukrawar Peth · Pune",
+        "lat": 18.513257337977787,
+        "lon": 73.85373624225248,
+        "eye": 3
+      }
+    },
+    "04-hills-trees": {
+      "fps": 30.6,
+      "heapMB": 335,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Dattawadi · Pune",
+        "lat": 18.49723450545411,
+        "lon": 73.84728256292279,
+        "eye": 431.7254745197471
+      }
+    },
+    "05-river-bridge": {
+      "fps": 21.2,
+      "heapMB": 331,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Shaniwar Peth · Pune",
+        "lat": 18.522033254153943,
+        "lon": 73.85416269246392,
+        "eye": 126.93286193077392
+      }
+    },
+    "06-flyover-metro-traffic": {
+      "fps": 11.5,
+      "heapMB": 339,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Nal Stop · Pune",
+        "lat": 18.50755751613142,
+        "lon": 73.8288587185319,
+        "eye": 56.51963210399424
+      }
+    },
+    "07-night-city": {
+      "fps": 40.2,
+      "heapMB": 338,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Shaniwar Peth · Pune",
+        "lat": 18.520857100439613,
+        "lon": 73.85198286442517,
+        "eye": 947.5757580145134
+      }
+    },
+    "08-golden-hour": {
+      "fps": 6.2,
+      "heapMB": 355,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Deccan Gymkhana · Pune",
+        "lat": 18.513166864615147,
+        "lon": 73.84297948767131,
+        "eye": 475.0888192562012
+      }
+    },
+    "09-about-heights": {
+      "fps": 4.1,
+      "heapMB": 343,
+      "calls": 1,
+      "triangles": 1,
+      "readout": {
+        "place": "Shaniwar Peth · Pune",
+        "lat": 18.520857100439613,
+        "lon": 73.85198286442517,
+        "eye": 947.5757580145134
+      }
+    }
+  }
+}

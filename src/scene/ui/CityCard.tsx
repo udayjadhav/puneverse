@@ -10,11 +10,11 @@ export function CityCard() {
         <span className="text-sm font-semibold text-[#f5a524]">पुणे</span>
       </div>
       <p className="mt-0.5 text-[11px] text-slate-400">
-        Pune centre ·{" "}
+        Open-data 3D twin ·{" "}
         {buildings != null ? (
           <>
-            <strong className="text-slate-200">{buildings.toLocaleString("en-IN")}</strong> buildings placed from
-            the map
+            <strong className="text-slate-200">{buildings.toLocaleString("en-IN")}</strong> buildings (heights labelled
+            by source)
           </>
         ) : (
           "loading buildings…"

@@ -8,7 +8,8 @@
  *   facade    f32×2  walls: (metres along the perimeter, metres above base)
  *                    roofs: (world x, world z)
  *   color     u8×3   wall tint or roof colour
- *   bdata     u8×4   (kind, part, seed, floors); part 0 wall, 1 roof, 2 parapet inside
+ *   bdata     f32×4  (kind, part, seed, floors); part 0 wall, 1 roof, 2 parapet inside
+ *                    seed keeps the full bake uint16 so facade patterns do not collide.
  */
 
 import { ShapeUtils, Vector2 } from "three";
@@ -37,7 +38,7 @@ export interface BuiltBuildings {
   normal: Int8Array;
   facade: Float32Array;
   color: Uint8Array;
-  bdata: Uint8Array;
+  bdata: Float32Array;
   index: Uint32Array;
   /** First triangle of each building (length n + 1), for picking. */
   triStart: Uint32Array;
@@ -91,7 +92,7 @@ export function buildBuildings(
   const normal = new Int8Array(m.verts * 3);
   const facade = new Float32Array(m.verts * 2);
   const color = new Uint8Array(m.verts * 3);
-  const bdata = new Uint8Array(m.verts * 4);
+  const bdata = new Float32Array(m.verts * 4);
   let index = new Uint32Array(m.idx);
   const triStart = new Uint32Array(n + 1);
   let v = 0;
@@ -130,7 +131,7 @@ export function buildBuildings(
     const h = a.height[b];
     const base = a.base[b];
     const kind = a.kind[b];
-    const seed = a.seed[b] & 255;
+    const seed = a.seed[b];
     const floors = Math.min(255, estimateFloors(h, kind));
     const wr = a.wall[b * 3], wg = a.wall[b * 3 + 1], wb = a.wall[b * 3 + 2];
     const rr = a.roof[b * 3], rg = a.roof[b * 3 + 1], rb = a.roof[b * 3 + 2];

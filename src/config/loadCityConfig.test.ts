@@ -38,24 +38,19 @@ describe("loadCityConfig", () => {
   it("exposes required honesty disclosure strings", () => {
     const { honesty } = getDefaultCityConfig();
 
-    expect(honesty.day_night).toMatch(/day\/night/i);
-    expect(honesty.day_night.toLowerCase()).toMatch(/lighting/);
+    expect(honesty.day_night.toLowerCase()).toMatch(/3d/);
+    expect(honesty.day_night.toLowerCase()).toMatch(/basemap|2d/);
     expect(honesty.heights.toLowerCase()).toMatch(/height/);
-    expect(honesty.heights.toLowerCase()).toMatch(
-      /not invent|no fabricated|unknown/,
-    );
-    expect(honesty.heights.toLowerCase()).toMatch(/flat|no extrusion/);
-    expect(honesty.extent).toMatch(/PMC/);
-    expect(honesty.extent).toMatch(/PCMC|twin.?city/i);
+    expect(honesty.heights.toLowerCase()).toMatch(/estimate/);
+    expect(honesty.heights.toLowerCase()).toMatch(/mapped|satellite|floors/);
+    expect(honesty.extent).toMatch(/PMC|PCMC|Sinhgad|manifest/i);
     expect(honesty.search_limits.length).toBeGreaterThan(10);
-    expect(honesty.ship_hold).toMatch(/SHIP HOLD/);
-    expect(honesty.ship_hold.toLowerCase()).toMatch(/not.*production|do not treat/);
+    expect(honesty.ship_hold).toMatch(/not an official municipal product|exploration|SAMPLE/i);
+    expect(honesty.ship_hold.toLowerCase()).toMatch(/do not treat|not claimed|official/);
     expect(honesty.attribution.toLowerCase()).toMatch(/openstreetmap|\bosm\b/);
-    expect(honesty.camera ?? "").toMatch(/3D/);
-    expect(honesty.camera ?? "").toMatch(/flat/i);
-    expect(honesty.ship_hold).toMatch(/SAMPLE/);
-    expect(honesty.ship_hold.toLowerCase()).toMatch(/water, parks, rail and metro are real/);
-    expect(honesty.terrain).toMatch(/no vertical exaggeration/);
+    expect(honesty.camera ?? "").toMatch(/3D|Three/i);
+    expect((honesty.terrain ?? "").toLowerCase()).toMatch(/dem|terrain|copernicus/);
+    expect((honesty.trees ?? "").toLowerCase()).toMatch(/worldcover|tree/);
   });
 
   it("marks buildings/roads/water/parks ready; admin sample; terrain at true scale", () => {

@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { ConsentBanner, initAnalytics, noteMeaningfulInteraction, PV_EVENTS, track } from "@/analytics";
 import { getDefaultCityConfig } from "@/config/loadCityConfig";
 import { fetchBuildingStats } from "@/map/buildingStats";
 import { MapView } from "@/map/MapView";
@@ -43,7 +44,11 @@ function MapExperience() {
       <AboutPanel />
       <button
         type="button"
-        onClick={() => setView("scene")}
+        onClick={() => {
+          noteMeaningfulInteraction();
+          track(PV_EVENTS.view_changed, { view: "scene" });
+          setView("scene");
+        }}
         className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-full border border-white/15 bg-slate-900/85 px-4 py-2 text-sm font-medium text-amber-300 shadow-lg backdrop-blur hover:bg-slate-800"
         data-testid="back-to-3d"
       >
@@ -55,6 +60,14 @@ function MapExperience() {
 
 export default function App() {
   const view = useSceneStore((s) => s.view);
+  const booted = useRef(false);
+
+  useEffect(() => {
+    if (booted.current) return;
+    booted.current = true;
+    void initAnalytics();
+  }, []);
+
   return (
     <WebGLGate>
       <div className="relative h-full w-full overflow-hidden bg-slate-950">
@@ -66,6 +79,7 @@ export default function App() {
         ) : (
           <MapExperience />
         )}
+        <ConsentBanner />
       </div>
     </WebGLGate>
   );

@@ -10,6 +10,8 @@
 
 English UI. Open data only. No paid tile APIs, no Overpass in the live path.
 
+Private product analytics (PostHog) are optional and consent-gated — see [docs/ANALYTICS.md](docs/ANALYTICS.md). Nothing visitor-facing is shown in the app.
+
 ---
 
 ## What’s in the scene (baked S0)
@@ -33,12 +35,15 @@ Heights are **honest**: mapped OSM / floors when present; otherwise calibrated s
 
 - **WebGL 3D city** — chunk-streamed buildings, terrain, satellite ground, water, roads, bridges, rail, trees, traffic, rooftop props
 - **Time of day** — continuous IST slider + Sunrise / Midday / Golden hour / Night presets (sky, sun, fog, night windows)
-- **Place chips** — fly camera to landmarks and neighbourhoods
+- **Search** — find localities, stations, bridges and landmarks; fly-to + info card
+- **Place chips** — one-click fly camera to curated presets
+- **Landmark cards** — EN/MR names, category, short sourced description (major places)
 - **Detail levels** — Low → Ultra (shadows, streaming radius, prop distance)
 - **Labels** — toggle floating place names
-- **Pick a building** — tooltip with height (m), ~floors, and height source
+- **Pick a building** — minimal tooltip (height, ~floors, height source)
+- **Data-quality mode** — Shift+D for developers (confidence + methodology)
 - **About / honesty** — data sources, height breakdown bar, attribution
-- **Fallback 2D map** — MapLibre + OpenFreeMap if WebGL isn’t available
+- **Optional 2D map** — MapLibre + OpenFreeMap (WebGL still required)
 - **Fail-closed** — missing bake / WebGL errors surface in UI instead of a blank silent page
 
 ---

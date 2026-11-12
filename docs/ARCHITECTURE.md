@@ -1,42 +1,38 @@
-# Architecture — Phase 1 Option 0 (S0 center ready)
+# Architecture — PuneVerse 3D twin (current)
+
+**Primary runtime:** Three.js scene (`src/scene/`) streaming `public/scene/s0/`.  
+**Secondary:** MapLibre 2D (`src/map/`) for basemap / optional PMTiles.
 
 ## Layout
 
 ```
 puneverse/
-├── config/cities/pune.json     # G0 city lock (ready|sample|stub)
+├── config/cities/pune.json     # City lock + honesty copy (both views)
 ├── public/
-│   ├── tiles/                  # S0 PMTiles (gitignored; local bake)
-│   └── data/
-│       ├── places.index.json
-│       ├── fixtures/           # CI GeoJSON slices
-│       └── overlays/           # SAMPLE GeoJSON (admin only loaded)
-│           ├── admin.sample.geojson
-│           └── README.md
+│   ├── scene/s0/               # Baked 3D twin (committed for free hosting)
+│   ├── tiles/                  # Optional PMTiles for 2D (often gitignored)
+│   └── data/                   # Places / SAMPLE admin / fixtures
 ├── src/
-│   ├── config/                 # load + types (LayerStatus: stub|sample|ready)
-│   ├── map/                    # MapView, basemap, overlays, readyOverlays, pmtiles
-│   ├── places/                 # fixture search helpers
-│   ├── store/                  # Zustand UI state (+ tilesBanner)
-│   └── ui/                     # chrome panels
-├── pipeline/                   # tippecanoe v2.79.0 + osmium S0 bake
+│   ├── scene/                  # Three.js engine + chrome (default)
+│   ├── map/                    # MapLibre path
+│   ├── store/                  # Zustand (sceneStore + mapStore)
+│   └── ui/                     # Shared gates / map chrome
+├── pipeline/                   # bake_scene.py + height helpers
 └── docs/
 ```
 
-## Option 0 principles (current)
+## Principles (current)
 
 | Choice | Why |
 | --- | --- |
-| Import city JSON via Vite | Single source of truth under `config/` |
-| Ready PMTiles for buildings/roads | Local tippecanoe bake from Geofabrik western-zone clip (S0 center) |
+| Three.js default | City-scale procedural façades, TOY lighting, chunk streaming |
+| MapLibre optional | Free 2D basemap; PMTiles when baked locally |
+| Manifest-driven presets | Places / landmarks from bake — not a second hardcoded city list |
+| Labelled height sources | Mapped / floors / satellite / area / default — estimates never “measured” |
+| Data-quality mode (Shift+D) | Developer provenance inspection without cluttering default UI |
 | SAMPLE admin only | Illustrative twin-city extent; not official wards |
-| Stub water/parks | No geometry invented for those layers yet |
-| OpenFreeMap / MapLibre demo | Free, no API key |
-| Fixture places | Search works without claiming completeness |
-| No R2 / Overpass | Keeps Phase 1 local and honest |
-| `src/map/pmtiles.ts` | Registers `pmtiles://` protocol (tippecanoe **not** deferred) |
-| Fail-closed tiles | Missing `/tiles/*.pmtiles` → store banner; do not silently show empty ready |
-| Convention SAMPLE paths | `/data/overlays/{id}.sample.geojson` — admin only |
+| No R2 / Overpass in live path | Free static hosting |
+| Fail-closed scene load | Manifest / WebGL errors surface in UI |
 
 ## Runtime flow
 

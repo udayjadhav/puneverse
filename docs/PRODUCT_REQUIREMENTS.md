@@ -1,5 +1,7 @@
 # Product requirements (docs mirror)
 
-Canonical copy: [`../PRODUCT_REQUIREMENTS.md`](../PRODUCT_REQUIREMENTS.md).
+Canonical product status lives in the repo-root **`PRODUCT_REQUIREMENTS.md`**.
 
-**SHIP HOLD** — S0 center buildings/roads are real clipped OSM PMTiles (local tippecanoe v2.79.0 bake). Admin remains SAMPLE. Water/parks stub. SAMPLE road spokes removed. No R2. No Overpass. Not a production release.
+**Current product:** Three.js open-data 3D twin of Pune (`public/scene/s0/`), not a MapLibre-only S0 center PoC.
+
+Do not treat this folder’s older Phase-1 SHIP HOLD drafts as live product copy.

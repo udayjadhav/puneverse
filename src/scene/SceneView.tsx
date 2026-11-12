@@ -1,4 +1,11 @@
 import { useEffect, useRef } from "react";
+import {
+  distanceBucket,
+  noteMeaningfulInteraction,
+  pitchBucket,
+  PV_EVENTS,
+  track,
+} from "@/analytics";
 import { useSceneStore } from "@/store/sceneStore";
 import { SceneEngine, type Detail } from "./engine/SceneEngine";
 
@@ -40,11 +47,37 @@ export function SceneView() {
     const engine = new SceneEngine(el, {
       stage: (id) => useSceneStore.getState().markStage(id),
       manifest: (m) => useSceneStore.getState().setManifest(m),
-      ready: () => useSceneStore.getState().setReady(true),
-      error: (e) => useSceneStore.getState().setLoadError(e),
+      ready: () => {
+        useSceneStore.getState().setReady(true);
+        track(PV_EVENTS.scene_loaded, { view: "scene" });
+      },
+      error: (e) => {
+        // Ignore errors from a disposed engine (Strict Mode remount race).
+        if (engineRef.current !== engine) return;
+        useSceneStore.getState().setLoadError(e);
+        track(PV_EVENTS.scene_load_failed, { view: "scene", error: e.slice(0, 120) });
+      },
       readout: (r) => useSceneStore.getState().setReadout(r),
       hover: (h) => useSceneStore.getState().setHover(h),
+      select: (info) => {
+        noteMeaningfulInteraction();
+        track(PV_EVENTS.building_selected, {
+          view: "scene",
+          source: "scene",
+          building_name: info.name,
+          building_type: info.kind,
+          building_height_m: info.height,
+          height_source: info.source,
+        });
+      },
       fps: (f) => useSceneStore.getState().setFps(f),
+      cameraSample: ({ dist, pitch }) => {
+        track(PV_EVENTS.camera_exploration, {
+          view: "scene",
+          camera_distance_bucket: distanceBucket(dist),
+          camera_pitch_bucket: pitchBucket(pitch),
+        });
+      },
     });
     engineRef.current = engine;
     window.__pvEngine = engine;

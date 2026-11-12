@@ -1,3 +1,4 @@
+import { noteMeaningfulInteraction, PV_EVENTS, track } from "@/analytics";
 import { getDefaultCityConfig } from "@/config/loadCityConfig";
 import { useMapStore } from "@/store/mapStore";
 
@@ -17,16 +18,23 @@ export function TopBar() {
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-sm font-semibold tracking-tight">PuneVerse</h1>
           <span className="rounded bg-amber-400/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-amber-200 uppercase">
-            SHIP HOLD
+            Open data
           </span>
         </div>
-        <p className="text-xs text-slate-300">{city.display_name} · real data: city center only</p>
+        <p className="text-xs text-slate-300">{city.display_name} · 2D map view (optional)</p>
       </div>
       <div className="pointer-events-auto flex flex-wrap justify-end gap-2">
         <button
           type="button"
           className="rounded-md border border-slate-600 bg-slate-950/90 px-3 py-1.5 text-sm text-slate-100 shadow backdrop-blur hover:bg-slate-800"
-          onClick={() => toggleTheme()}
+          onClick={() => {
+            toggleTheme();
+            noteMeaningfulInteraction();
+            track(PV_EVENTS.map_theme_changed, {
+              view: "map",
+              map_theme: theme === "day" ? "night" : "day",
+            });
+          }}
           aria-pressed={theme === "night"}
           title="Switches basemap lighting style only — not a live day/night view of the city"
           aria-label={
@@ -48,7 +56,14 @@ export function TopBar() {
         <button
           type="button"
           className="rounded-md border border-slate-600 bg-slate-950/90 px-3 py-1.5 text-sm text-slate-100 shadow backdrop-blur hover:bg-slate-800"
-          onClick={() => toggleViewMode()}
+          onClick={() => {
+            toggleViewMode();
+            noteMeaningfulInteraction();
+            track(PV_EVENTS.map_view_mode_changed, {
+              view: "map",
+              map_view_mode: viewMode === "3d" ? "flat" : "3d",
+            });
+          }}
           aria-pressed={viewMode === "flat"}
           data-testid="view-mode-toggle"
           title={
@@ -62,7 +77,11 @@ export function TopBar() {
         <button
           type="button"
           className="rounded-md border border-slate-600 bg-slate-950/90 px-3 py-1.5 text-sm text-slate-100 shadow backdrop-blur hover:bg-slate-800"
-          onClick={() => setAboutOpen(true)}
+          onClick={() => {
+            noteMeaningfulInteraction();
+            track(PV_EVENTS.about_opened, { view: "map" });
+            setAboutOpen(true);
+          }}
         >
           About / honesty
         </button>

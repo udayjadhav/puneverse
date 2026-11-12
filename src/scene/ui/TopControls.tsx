@@ -1,3 +1,4 @@
+import { noteMeaningfulInteraction, PV_EVENTS, track } from "@/analytics";
 import { useSceneStore, type DetailLevel } from "@/store/sceneStore";
 import { PANEL, PILL, PILL_ACTIVE } from "./styles";
 
@@ -22,7 +23,11 @@ export function TopControls() {
         type="button"
         className={`${PILL} ${labels ? PILL_ACTIVE : ""}`}
         aria-pressed={labels}
-        onClick={toggleLabels}
+        onClick={() => {
+          toggleLabels();
+          noteMeaningfulInteraction();
+          track(PV_EVENTS.labels_toggled, { view: "scene", labels_on: !labels });
+        }}
         data-testid="labels-toggle"
       >
         Labels
@@ -31,7 +36,12 @@ export function TopControls() {
         className="rounded-full border border-white/10 bg-slate-900 px-2 py-1 text-xs text-slate-200"
         aria-label="Detail level"
         value={detail}
-        onChange={(e) => setDetail(e.target.value as DetailLevel)}
+        onChange={(e) => {
+          const next = e.target.value as DetailLevel;
+          setDetail(next);
+          noteMeaningfulInteraction();
+          track(PV_EVENTS.detail_level_changed, { view: "scene", detail_level: next });
+        }}
         data-testid="detail-select"
       >
         {DETAIL_OPTIONS.map((o) => (
@@ -40,10 +50,28 @@ export function TopControls() {
           </option>
         ))}
       </select>
-      <button type="button" className={PILL} onClick={() => setView("map")} data-testid="map-view-button">
+      <button
+        type="button"
+        className={PILL}
+        onClick={() => {
+          noteMeaningfulInteraction();
+          track(PV_EVENTS.view_changed, { view: "map" });
+          setView("map");
+        }}
+        data-testid="map-view-button"
+      >
         2D map
       </button>
-      <button type="button" className={PILL} onClick={() => setAboutOpen(true)} data-testid="about-button">
+      <button
+        type="button"
+        className={PILL}
+        onClick={() => {
+          noteMeaningfulInteraction();
+          track(PV_EVENTS.about_opened, { view: "scene" });
+          setAboutOpen(true);
+        }}
+        data-testid="about-button"
+      >
         About
       </button>
     </div>
