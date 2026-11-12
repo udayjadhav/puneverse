@@ -301,14 +301,16 @@ export async function fetchOpenMeteoSnapshot(
   });
 
   const base = emptyLiveSnapshot(bbox);
+  // 3D vehicle counts use a cached typical-hour curve (see trafficDemand.ts).
+  // Congestion colours / live speeds remain unavailable — no free GPS feed.
   base.traffic.meta = {
-    source: "none",
-    observedAt: null,
+    source: "pune-typical-hour-cache",
+    observedAt: fetchedAt,
     fetchedAt,
-    spatialResolution: "n/a",
-    status: "unavailable",
+    spatialResolution: "city-wide typical hour (IST) — not live GPS",
+    status: "ok",
     message:
-      "Live congestion unavailable — no free traffic-speed feed. OSM roads stay in the 3D scene; OSRM may be added later for routes only.",
+      "3D road activity follows a cached typical Pune hour profile. Live congestion speeds are still unavailable on the free tier.",
   };
 
   try {

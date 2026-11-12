@@ -94,7 +94,7 @@ describe("Live City UI", () => {
     });
     const host = render(<LiveCityPanel />);
     expect(host.querySelector('[data-testid="live-traffic-unavailable"]')?.textContent).toMatch(
-      /always on|no fake green/i,
+      /typical Pune hour|not live GPS|no fake green/i,
     );
   });
 

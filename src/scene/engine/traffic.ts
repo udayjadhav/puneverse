@@ -175,11 +175,11 @@ const TYPE_SCALE = [
   new Vector3(2.6, 2.6, 2.6), // ped
 ];
 
-const PED_BUDGET_FRAC = 0.12;
-/** Keep this fraction of agents within LOCAL_R of the camera as you travel. */
-const LOCAL_FRACTION = 0.42;
-const LOCAL_R = 1100;
-const FAR_R = 3200;
+const PED_BUDGET_FRAC = 0.1;
+/** Keep a light local pool near the camera — not a traffic jam in every view. */
+const LOCAL_FRACTION = 0.22;
+const LOCAL_R = 850;
+const FAR_R = 2800;
 const CELL_M = 500;
 
 export class TrafficSystem {
@@ -435,7 +435,7 @@ export class TrafficSystem {
   private ensureLocalDensity(lx: number, ly: number) {
     const nearSegs = this.segsNear(lx, ly, LOCAL_R);
     if (!nearSegs.length) return;
-    const want = Math.max(24, Math.floor(this.vehicles.length * LOCAL_FRACTION));
+    const want = Math.max(16, Math.floor(this.vehicles.length * LOCAL_FRACTION));
     const farR2 = FAR_R * FAR_R;
     const localR2 = LOCAL_R * LOCAL_R;
     let near = 0;

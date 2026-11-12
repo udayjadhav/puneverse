@@ -28,12 +28,14 @@ const TRAIN_SPEED = 18;
 const SNAP_M = 14;
 
 const TYPE_SCALE = [
-  new Vector3(1.15, 1.15, 1.15), // metro
-  new Vector3(1.05, 1.05, 1.05), // train
+  new Vector3(1.0, 1.0, 1.0), // metro — real-ish 1:1 metres
+  new Vector3(1.0, 1.0, 1.0), // train
 ];
 
-const METRO_COLORS = [0x7a1f2b, 0xc0392b, 0x1a5276, 0x117a65];
-const TRAIN_COLORS = [0x1b4f72, 0x5d6d7e, 0x784212, 0x1c2833];
+/** One metro + one train city-wide; only the nearest metro is drawn in-frame. */
+const METRO_COUNT = 1;
+const TRAIN_COUNT = 1;
+const HIDE = new Vector3(0, 0, 0);
 
 interface Agent {
   seg: number;
@@ -141,10 +143,9 @@ class RailGraph {
   }
 }
 
-const RAIL_LOCAL_R = 1800;
-const RAIL_FAR_R = 4500;
-const RAIL_LOCAL_FRAC = 0.45;
 const RAIL_CELL = 600;
+/** Prefer keeping the single metro on elevated track near the camera when possible. */
+const METRO_FOLLOW_R = 2200;
 
 export class RailTransitSystem {
   readonly group = new Group();
@@ -157,16 +158,20 @@ export class RailTransitSystem {
   private visible = true;
   private paused = false;
   private metroSegs: number[] = [];
-  private trainSegs: number[] = [];
   private cellSegs = new Map<string, number[]>();
   private redistribT = 99;
+  private camLx = 0;
+  private camLy = 0;
+  private hasCam = false;
 
-  constructor(net: RailNetwork, u: SharedUniforms, count: number) {
+  constructor(net: RailNetwork, u: SharedUniforms, _count: number) {
     this.graph = new RailGraph(net);
     this.group.name = "rail-transit-simulated";
-    const mat = makePropMaterial(u, { roughness: 0.4 });
+    // Slightly metallic so silver metro shell reads correctly (not chalky/pale).
+    const mat = makePropMaterial(u, { roughness: 0.32 });
+    mat.metalness = 0.35;
 
-    const scoreSeg = (s: number) => this.graph.len[s] * (net.elevated[s] ? 1.4 : 1);
+    const scoreSeg = (s: number) => this.graph.len[s] * (net.elevated[s] ? 1.8 : 1);
 
     const metroSegs: number[] = [];
     const trainSegs: number[] = [];
@@ -181,15 +186,12 @@ export class RailTransitSystem {
       b.push(s);
     }
     this.metroSegs = metroSegs;
-    this.trainSegs = trainSegs;
 
-    const metroBudget = metroSegs.length ? Math.max(8, Math.floor(count * 0.55)) : 0;
-    const trainBudget = trainSegs.length ? Math.max(6, count - metroBudget) : 0;
     const caps = [0, 0];
     const plan: Agent[] = [];
 
     const push = (seg: number, type: number) => {
-      const base = (type === TYPE_METRO ? METRO_SPEED : TRAIN_SPEED) * (0.85 + this.rnd() * 0.3);
+      const base = (type === TYPE_METRO ? METRO_SPEED : TRAIN_SPEED) * (0.9 + this.rnd() * 0.2);
       plan.push({
         seg,
         dir: this.rnd() < 0.5 ? 1 : -1,
@@ -202,28 +204,14 @@ export class RailTransitSystem {
       });
     };
 
-    const seed = (segs: number[], type: number, budget: number) => {
-      if (!segs.length || budget <= 0) return;
-      // City-wide: longer (and elevated) lines first, but cover the whole network.
+    const pickBest = (segs: number[]) => {
+      if (!segs.length) return -1;
       const ranked = [...segs].sort((a, b) => scoreSeg(b) - scoreSeg(a));
-      let placed = 0;
-      for (const seg of ranked) {
-        const spacing = type === TYPE_METRO ? 220 : 380;
-        const n = Math.max(1, Math.min(3, Math.floor(this.graph.len[seg] / spacing)));
-        for (let k = 0; k < n && placed < budget; k++) {
-          push(seg, type);
-          placed++;
-        }
-        if (placed >= budget) break;
-      }
-      while (placed < budget) {
-        push(ranked[Math.floor(this.rnd() * ranked.length)], type);
-        placed++;
-      }
+      return ranked[0];
     };
 
-    seed(metroSegs, TYPE_METRO, metroBudget);
-    seed(trainSegs, TYPE_TRAIN, trainBudget);
+    if (metroSegs.length && METRO_COUNT > 0) push(pickBest(metroSegs), TYPE_METRO);
+    if (trainSegs.length && TRAIN_COUNT > 0) push(pickBest(trainSegs), TYPE_TRAIN);
 
     this.agents = plan;
     this.hints = new Array(plan.length).fill(-1);
@@ -234,9 +222,9 @@ export class RailTransitSystem {
       mesh.frustumCulled = false;
       mesh.castShadow = true;
       mesh.name = `sim-rail-${TYPES[t]}`;
-      const pal = t === TYPE_METRO ? METRO_COLORS : TRAIN_COLORS;
-      const c = new Color();
-      for (let i = 0; i < caps[t]; i++) mesh.setColorAt(i, c.setHex(pal[Math.floor(this.rnd() * pal.length)]));
+      // Keep vertex colours (silver + purple); white instance tint avoids washed-out look.
+      const c = new Color(1, 1, 1);
+      for (let i = 0; i < caps[t]; i++) mesh.setColorAt(i, c);
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
       this.meshes.push(mesh);
       this.group.add(mesh);
@@ -272,20 +260,20 @@ export class RailTransitSystem {
     return dx * dx + dy * dy;
   }
 
-  private segsNear(lx: number, ly: number, preferMetro: boolean | null): number[] {
-    const rCells = Math.ceil(RAIL_LOCAL_R / RAIL_CELL);
+  private segsNear(lx: number, ly: number, preferMetro: boolean): number[] {
+    const rCells = Math.ceil(METRO_FOLLOW_R / RAIL_CELL);
     const cx0 = Math.floor(lx / RAIL_CELL);
     const cy0 = Math.floor(ly / RAIL_CELL);
     const out: number[] = [];
-    const r2 = RAIL_LOCAL_R * RAIL_LOCAL_R;
+    const r2 = METRO_FOLLOW_R * METRO_FOLLOW_R;
     for (let dx = -rCells; dx <= rCells; dx++) {
       for (let dy = -rCells; dy <= rCells; dy++) {
         const bucket = this.cellSegs.get(`${cx0 + dx}:${cy0 + dy}`);
         if (!bucket) continue;
         for (const s of bucket) {
           if (this.segDist2(s, lx, ly) > r2) continue;
-          if (preferMetro === true && !this.graph.net.metro[s]) continue;
-          if (preferMetro === false && this.graph.net.metro[s]) continue;
+          if (preferMetro && !this.graph.net.metro[s]) continue;
+          if (!preferMetro && this.graph.net.metro[s]) continue;
           out.push(s);
         }
       }
@@ -293,46 +281,36 @@ export class RailTransitSystem {
     return out;
   }
 
-  private ensureLocalDensity(lx: number, ly: number) {
-    const want = Math.max(8, Math.floor(this.agents.length * RAIL_LOCAL_FRAC));
-    const localR2 = RAIL_LOCAL_R * RAIL_LOCAL_R;
-    const farR2 = RAIL_FAR_R * RAIL_FAR_R;
-    let near = 0;
-    const farIdx: number[] = [];
-    for (let i = 0; i < this.agents.length; i++) {
-      const d2 = this.segDist2(this.agents[i].seg, lx, ly);
-      if (d2 <= localR2) near++;
-      else if (d2 > farR2) farIdx.push(i);
-    }
-    let need = want - near;
-    while (need > 0 && farIdx.length) {
-      const ii = (this.rnd() * farIdx.length) | 0;
-      const i = farIdx[ii];
-      farIdx[ii] = farIdx[farIdx.length - 1];
-      farIdx.pop();
-      const v = this.agents[i];
-      const pool = this.segsNear(lx, ly, v.type === TYPE_METRO);
-      const fallback = v.type === TYPE_METRO ? this.metroSegs : this.trainSegs;
-      const segs = pool.length ? pool : fallback;
-      if (!segs.length) continue;
-      const seg = segs[(this.rnd() * segs.length) | 0];
-      v.seg = seg;
-      v.dir = this.rnd() < 0.5 ? 1 : -1;
-      v.s = this.rnd() * Math.max(1, this.graph.len[seg]);
-      v.speed = v.baseSpeed * 0.8;
-      this.hints[v.vi] = -1;
-      need--;
-    }
+  /** If the camera is near metro track, keep the single metro on that corridor. */
+  private followMetro(lx: number, ly: number) {
+    const metro = this.agents.find((a) => a.type === TYPE_METRO);
+    if (!metro || !this.metroSegs.length) return;
+    const near = this.segsNear(lx, ly, true);
+    if (!near.length) return;
+    if (this.segDist2(metro.seg, lx, ly) <= METRO_FOLLOW_R * METRO_FOLLOW_R) return;
+    const elevated = near.filter((s) => this.graph.net.elevated[s]);
+    const pool = elevated.length ? elevated : near;
+    const seg = pool[(this.rnd() * pool.length) | 0];
+    metro.seg = seg;
+    metro.dir = this.rnd() < 0.5 ? 1 : -1;
+    metro.s = this.rnd() * Math.max(1, this.graph.len[seg]);
+    metro.speed = metro.baseSpeed * 0.85;
+    this.hints[metro.vi] = -1;
   }
 
   update(dt: number, camWorldX?: number, camWorldZ?: number) {
     if (!this.visible) return;
     const step = this.paused ? 0 : Math.max(0, dt * this.simSpeed);
-    if (camWorldX !== undefined && camWorldZ !== undefined && step > 0) {
-      this.redistribT += dt;
-      if (this.redistribT > 0.5) {
-        this.redistribT = 0;
-        this.ensureLocalDensity(camWorldX, -camWorldZ);
+    if (camWorldX !== undefined && camWorldZ !== undefined) {
+      this.camLx = camWorldX;
+      this.camLy = -camWorldZ;
+      this.hasCam = true;
+      if (step > 0) {
+        this.redistribT += dt;
+        if (this.redistribT > 1.2) {
+          this.redistribT = 0;
+          this.followMetro(this.camLx, this.camLy);
+        }
       }
     }
     const m4 = new Matrix4();
@@ -341,6 +319,20 @@ export class RailTransitSystem {
     const up = new Vector3(0, 1, 0);
     const pt = { x: 0, y: 0, z: 0, hx: 1, hy: 0 };
     const g = this.graph;
+
+    // Pick nearest metro agent to draw (only one in frame even if budget rises later).
+    let bestMetro = -1;
+    let bestMetroD = Infinity;
+    if (this.hasCam) {
+      for (let i = 0; i < this.agents.length; i++) {
+        if (this.agents[i].type !== TYPE_METRO) continue;
+        const d2 = this.segDist2(this.agents[i].seg, this.camLx, this.camLy);
+        if (d2 < bestMetroD) {
+          bestMetroD = d2;
+          bestMetro = i;
+        }
+      }
+    }
 
     for (let i = 0; i < this.agents.length; i++) {
       const v = this.agents[i];
@@ -363,11 +355,12 @@ export class RailTransitSystem {
       const hl = Math.hypot(hx, hy) || 1;
       hx /= hl;
       hy /= hl;
-      // Sit slightly above the rail ribbon deck.
-      const lift = g.net.elevated[v.seg] ? 1.2 : 0.55;
+      const lift = g.net.elevated[v.seg] ? 1.35 : 0.65;
       p.set(pt.x, pt.z - ELEV_BASE + lift, -pt.y);
       q.setFromAxisAngle(up, Math.atan2(hy, hx));
-      m4.compose(p, q, TYPE_SCALE[v.type]);
+      const show =
+        v.type !== TYPE_METRO || bestMetro < 0 || i === bestMetro;
+      m4.compose(p, q, show ? TYPE_SCALE[v.type] : HIDE);
       this.meshes[v.type].setMatrixAt(v.slot, m4);
     }
     for (const m of this.meshes) m.instanceMatrix.needsUpdate = true;

@@ -172,9 +172,10 @@ export function SceneAbout() {
               measurements unless the source is mapped.
             </li>
             <li>
-              Roadside cars, autos, buses, bikes and pedestrians are <strong>SIMULATED</strong> on OSM roads
-              (procedural). Metros run on OSM metro / light-rail lines and trains on heavy rail — also
-              simulated, not live GPS or timetables.
+              Road vehicles are <strong>SIMULATED</strong> on OSM roads; how many appear follows a{" "}
+              <strong>cached typical Pune hour</strong> profile (IST peaks), not live GPS. At most one
+              Pune Metro–style train and one heavy-rail train are shown on OSM rail lines — also
+              simulated, not live timetables.
             </li>
             <li>
               Live City uses free Open-Meteo for weather/rainfall (shared city sample). Rain particles and wet

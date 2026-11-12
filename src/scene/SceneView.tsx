@@ -7,6 +7,7 @@ import {
   track,
 } from "@/analytics";
 import { useLiveCityStore } from "@/live/liveCityStore";
+import { getTrafficDemand } from "@/live/trafficDemand";
 import { useSceneStore } from "@/store/sceneStore";
 import { SceneEngine } from "./engine/SceneEngine";
 
@@ -104,14 +105,19 @@ export function SceneView() {
       }
     });
 
-    // Always-on city motion: weather FX when raining, vehicles always moving.
+    // Always-on city motion: weather FX when raining; road density from cached typical hour.
     const live0 = useLiveCityStore.getState();
     engine.setWeatherFxEnabled(true);
     engine.setPreviewRain(false);
     engine.setTrafficVisible(true);
     engine.setTrafficPaused(false);
     engine.setSimSpeed(1);
-    engine.setTrafficDensity("heavy");
+    const syncDemand = () => {
+      const d = getTrafficDemand();
+      engine.applyTrafficDemand(d.countMul, d.density);
+    };
+    syncDemand();
+    const demandTimer = window.setInterval(syncDemand, 5 * 60_000);
     if (live0.liveMode) {
       engine.applyLiveSnapshot(live0.snapshot);
       void useLiveCityStore.getState().refresh();
@@ -126,6 +132,7 @@ export function SceneView() {
     return () => {
       unsub();
       unsubLive();
+      window.clearInterval(demandTimer);
       engine.dispose();
       engineRef.current = null;
       if (window.__pvEngine === engine) delete window.__pvEngine;

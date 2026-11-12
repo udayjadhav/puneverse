@@ -124,9 +124,9 @@ function LayerBody({ layer, snap }: { layer: LiveLayerId; snap: LiveSnapshot }) 
   if (layer === "traffic") {
     return (
       <p className="mt-1 text-slate-400" data-testid="live-traffic-unavailable">
-        Moving vehicles are always on in the 3D scene (cars, autos, buses, pedestrians on OSM roads;
-        metros on metro lines; trains on rail lines). Provider congestion speeds are not wired on the
-        free tier — no fake green/orange/red overlay.
+        Road vehicles follow a cached typical Pune hour profile (IST peaks) — not live GPS. One metro
+        and one train run on OSM rail when those lines exist. No fake green/orange/red congestion
+        overlay.
       </p>
     );
   }

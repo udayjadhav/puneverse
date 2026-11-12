@@ -99,7 +99,8 @@ describe("live client without Worker base", () => {
     expect(s.rainfall.meta.status).toBe("ok");
     expect(s.airQuality.stations[0]?.readingKind).toBe("model");
     expect(s.airQuality.stations[0]?.aqi).toBe(83);
-    expect(s.traffic.meta.status).toBe("unavailable");
+    expect(s.traffic.meta.status).toBe("ok");
+    expect(s.traffic.meta.source).toMatch(/typical-hour/);
     expect(s.traffic.segments).toEqual([]);
   });
 });

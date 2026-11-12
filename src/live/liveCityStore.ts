@@ -57,7 +57,7 @@ export const useLiveCityStore = create<LiveCityStore>((set, get) => ({
   previewRain: false,
   trafficVisible: true,
   simSpeed: 1,
-  trafficDensity: "heavy",
+  trafficDensity: "moderate",
   trafficPaused: false,
 
   setLiveMode: (liveMode) => {

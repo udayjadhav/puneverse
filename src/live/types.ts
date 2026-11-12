@@ -203,7 +203,7 @@ export const LIVE_LAYERS: {
   description: string;
 }[] = [
   { id: "overview", label: "Overview", description: "Status of all live layers" },
-  { id: "traffic", label: "Traffic", description: "Always-on road activity in the 3D scene" },
+  { id: "traffic", label: "Traffic", description: "Typical-hour road activity (cached) — not live GPS" },
   { id: "weather", label: "Weather", description: "Temperature, wind, conditions" },
   { id: "rainfall", label: "Rainfall", description: "Precipitation intensity" },
   { id: "air_quality", label: "Air quality", description: "AQI monitoring stations" },

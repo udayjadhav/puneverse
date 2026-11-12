@@ -180,31 +180,49 @@ const GLASS = new Color(0.08, 0.1, 0.12);
 export type VehicleType = "car" | "bus" | "auto" | "bike" | "ped";
 export type RailVehicleType = "metro" | "train";
 
-/** Low-poly metro coach or loco+coach (SIMULATED). Length along +X. */
+/**
+ * Low-poly rail stock (SIMULATED). Metro matches Pune Metro CRRC look:
+ * silver shell + Purple Line magenta waist stripe (not a pale red box).
+ */
 export function makeRailVehicleGeometry(t: RailVehicleType): BufferGeometry {
   const parts: BufferGeometry[] = [];
   if (t === "metro") {
-    const body = new Color(0.85, 0.2, 0.22);
-    const accent = new Color(0.95, 0.95, 0.95);
-    parts.push(colorize(at(new BoxGeometry(28, 3.2, 2.9), 0, 2.0, 0), body));
-    parts.push(colorize(at(new BoxGeometry(26.5, 1.4, 2.95), 0, 2.9, 0), GLASS));
-    parts.push(colorize(at(new BoxGeometry(0.2, 1.6, 2.7), 14.05, 2.4, 0), GLASS));
-    parts.push(colorize(at(new BoxGeometry(0.2, 1.6, 2.7), -14.05, 2.4, 0), GLASS));
-    parts.push(colorize(at(new BoxGeometry(28.2, 0.25, 3.0), 0, 3.7, 0), accent));
-    for (const z of [-1.0, 1.0]) {
-      parts.push(colorize(at(new BoxGeometry(0.12, 0.28, 0.4), 14.1, 1.35, z), new Color(1, 1, 0.85), 1));
-      parts.push(colorize(at(new BoxGeometry(0.12, 0.28, 0.4), -14.1, 1.35, z), new Color(0.9, 0.1, 0.05), 2));
+    const silver = new Color(0.78, 0.8, 0.84);
+    const silverDark = new Color(0.55, 0.58, 0.62);
+    const purple = new Color(0.55, 0.08, 0.42); // Pune Metro Purple Line
+    const skirt = new Color(0.12, 0.12, 0.14);
+    // Three-car consist (~54 m), articulated look.
+    const cars = [-18, 0, 18];
+    for (const cx of cars) {
+      parts.push(colorize(at(new BoxGeometry(16.8, 3.15, 2.85), cx, 2.05, 0), silver));
+      parts.push(colorize(at(new BoxGeometry(15.6, 1.35, 2.92), cx, 2.95, 0), GLASS));
+      parts.push(colorize(at(new BoxGeometry(16.9, 0.35, 2.9), cx, 0.55, 0), skirt));
+      parts.push(colorize(at(new BoxGeometry(16.85, 0.28, 2.95), cx, 1.35, 0), purple));
+      parts.push(colorize(at(new BoxGeometry(16.9, 0.12, 2.95), cx, 3.7, 0), silverDark));
+      // Door recesses
+      for (const dx of [-5.2, 0, 5.2]) {
+        parts.push(colorize(at(new BoxGeometry(1.1, 2.2, 2.88), cx + dx, 1.9, 0), silverDark));
+      }
+    }
+    // Cab ends
+    parts.push(colorize(at(new BoxGeometry(0.35, 2.4, 2.7), 26.6, 2.3, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(0.35, 2.4, 2.7), -26.6, 2.3, 0), GLASS));
+    for (const z of [-0.95, 0.95]) {
+      parts.push(colorize(at(new BoxGeometry(0.14, 0.32, 0.42), 26.75, 1.25, z), new Color(1, 0.95, 0.75), 1));
+      parts.push(colorize(at(new BoxGeometry(0.14, 0.32, 0.42), -26.75, 1.25, z), new Color(0.85, 0.05, 0.05), 2));
     }
   } else {
-    const loco = new Color(0.15, 0.35, 0.55);
-    const coach = new Color(0.75, 0.78, 0.8);
-    parts.push(colorize(at(new BoxGeometry(12, 3.6, 3.0), 10, 2.2, 0), loco));
-    parts.push(colorize(at(new BoxGeometry(10.5, 1.3, 3.05), 10, 3.2, 0), GLASS));
-    parts.push(colorize(at(new BoxGeometry(0.15, 1.8, 2.8), 16.05, 2.5, 0), GLASS));
-    parts.push(colorize(at(new BoxGeometry(22, 3.3, 2.85), -6, 2.1, 0), coach));
-    parts.push(colorize(at(new BoxGeometry(20.5, 1.2, 2.9), -6, 3.0, 0), GLASS));
+    const loco = new Color(0.12, 0.28, 0.48);
+    const coach = new Color(0.82, 0.84, 0.86);
+    const stripe = new Color(0.85, 0.55, 0.12);
+    parts.push(colorize(at(new BoxGeometry(14, 3.7, 3.05), 12, 2.25, 0), loco));
+    parts.push(colorize(at(new BoxGeometry(12.2, 1.35, 3.1), 12, 3.25, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(0.2, 1.9, 2.85), 19.05, 2.55, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(24, 3.35, 2.9), -5, 2.15, 0), coach));
+    parts.push(colorize(at(new BoxGeometry(22.5, 1.25, 2.95), -5, 3.05, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(24.1, 0.22, 2.95), -5, 1.2, 0), stripe));
     for (const z of [-1.05, 1.05]) {
-      parts.push(colorize(at(new BoxGeometry(0.12, 0.3, 0.45), 16.1, 1.4, z), new Color(1, 1, 0.85), 1));
+      parts.push(colorize(at(new BoxGeometry(0.12, 0.3, 0.45), 19.1, 1.4, z), new Color(1, 1, 0.85), 1));
     }
   }
   return mergeGeometries(parts)!;
