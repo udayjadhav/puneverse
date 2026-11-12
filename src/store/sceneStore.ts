@@ -77,7 +77,7 @@ export const useSceneStore = create<SceneStore>((set) => ({
   loadError: null,
   ready: false,
   timeOfDay: 16.9,
-  detail: "high",
+  detail: "ultra",
   labels: true,
   aboutOpen: false,
   dataQualityMode: false,

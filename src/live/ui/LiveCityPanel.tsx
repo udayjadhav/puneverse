@@ -124,8 +124,9 @@ function LayerBody({ layer, snap }: { layer: LiveLayerId; snap: LiveSnapshot }) 
   if (layer === "traffic") {
     return (
       <p className="mt-1 text-slate-400" data-testid="live-traffic-unavailable">
-        Live congestion is unavailable. Road geometry comes from OpenStreetMap in the 3D scene. We do
-        not paint fake green/orange/red traffic.
+        Moving vehicles are always on in the 3D scene (cars, autos, buses, pedestrians on OSM roads;
+        metros on metro lines; trains on rail lines). Provider congestion speeds are not wired on the
+        free tier — no fake green/orange/red overlay.
       </p>
     );
   }

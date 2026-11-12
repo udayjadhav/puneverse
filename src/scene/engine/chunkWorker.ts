@@ -117,6 +117,12 @@ ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
           pier: copy(R.pier as Float32Array)!,
           lamp: copy(R.lamp as Float32Array)!,
         },
+        rails: {
+          vstart: copy(L.vstart as Uint32Array)!,
+          xyz: copy(L.xyz as Float32Array)!,
+          metro: copy(L.metro as Uint8Array)!,
+          elevated: copy(L.elevated as Uint8Array)!,
+        },
         railPier: copy(L.pier as Float32Array)!,
       };
       const transfer: Transferable[] = [];
@@ -124,6 +130,7 @@ ctx.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         for (const v of Object.values(r)) transfer.push((v as ArrayBufferView).buffer as ArrayBuffer);
       }
       for (const v of Object.values(out.roads)) transfer.push((v as ArrayBufferView).buffer as ArrayBuffer);
+      for (const v of Object.values(out.rails)) transfer.push((v as ArrayBufferView).buffer as ArrayBuffer);
       transfer.push(out.railPier.buffer);
       ctx.postMessage(out, transfer);
     }

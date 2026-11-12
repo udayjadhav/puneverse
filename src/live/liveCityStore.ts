@@ -53,7 +53,7 @@ export const useLiveCityStore = create<LiveCityStore>((set, get) => ({
   lastFetchError: null,
   fetching: false,
   weatherFxEnabled: true,
-  /** Off by default — rain particles only when Open-Meteo reports precip / rain codes. */
+  /** Always off — rain particles only when Open-Meteo reports precip / rain codes. */
   previewRain: false,
   trafficVisible: true,
   simSpeed: 1,

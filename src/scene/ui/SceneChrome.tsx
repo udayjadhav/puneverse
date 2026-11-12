@@ -4,7 +4,6 @@ import { LiveCityPanel } from "@/live/ui/LiveCityPanel";
 import { LiveLayerSelector } from "@/live/ui/LiveLayerSelector";
 import { LiveLegend } from "@/live/ui/LiveLegend";
 import { LiveStatus } from "@/live/ui/LiveStatus";
-import { SimControls } from "@/live/ui/SimControls";
 import { BottomBar } from "./BottomBar";
 import { CityCard } from "./CityCard";
 import { DataQualityLegend } from "./DataQualityLegend";
@@ -39,7 +38,6 @@ export function SceneChrome() {
       <PlaceSearch />
       <TopControls />
       <LiveStatus />
-      <SimControls />
       <LiveLayerSelector />
       <DataQualityLegend />
       <PlaceReadout />

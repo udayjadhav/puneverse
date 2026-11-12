@@ -177,7 +177,38 @@ export function makeStairHeadGeometry(): BufferGeometry {
 
 const GLASS = new Color(0.08, 0.1, 0.12);
 
-export type VehicleType = "car" | "bus" | "auto" | "bike";
+export type VehicleType = "car" | "bus" | "auto" | "bike" | "ped";
+export type RailVehicleType = "metro" | "train";
+
+/** Low-poly metro coach or loco+coach (SIMULATED). Length along +X. */
+export function makeRailVehicleGeometry(t: RailVehicleType): BufferGeometry {
+  const parts: BufferGeometry[] = [];
+  if (t === "metro") {
+    const body = new Color(0.85, 0.2, 0.22);
+    const accent = new Color(0.95, 0.95, 0.95);
+    parts.push(colorize(at(new BoxGeometry(28, 3.2, 2.9), 0, 2.0, 0), body));
+    parts.push(colorize(at(new BoxGeometry(26.5, 1.4, 2.95), 0, 2.9, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(0.2, 1.6, 2.7), 14.05, 2.4, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(0.2, 1.6, 2.7), -14.05, 2.4, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(28.2, 0.25, 3.0), 0, 3.7, 0), accent));
+    for (const z of [-1.0, 1.0]) {
+      parts.push(colorize(at(new BoxGeometry(0.12, 0.28, 0.4), 14.1, 1.35, z), new Color(1, 1, 0.85), 1));
+      parts.push(colorize(at(new BoxGeometry(0.12, 0.28, 0.4), -14.1, 1.35, z), new Color(0.9, 0.1, 0.05), 2));
+    }
+  } else {
+    const loco = new Color(0.15, 0.35, 0.55);
+    const coach = new Color(0.75, 0.78, 0.8);
+    parts.push(colorize(at(new BoxGeometry(12, 3.6, 3.0), 10, 2.2, 0), loco));
+    parts.push(colorize(at(new BoxGeometry(10.5, 1.3, 3.05), 10, 3.2, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(0.15, 1.8, 2.8), 16.05, 2.5, 0), GLASS));
+    parts.push(colorize(at(new BoxGeometry(22, 3.3, 2.85), -6, 2.1, 0), coach));
+    parts.push(colorize(at(new BoxGeometry(20.5, 1.2, 2.9), -6, 3.0, 0), GLASS));
+    for (const z of [-1.05, 1.05]) {
+      parts.push(colorize(at(new BoxGeometry(0.12, 0.3, 0.45), 16.1, 1.4, z), new Color(1, 1, 0.85), 1));
+    }
+  }
+  return mergeGeometries(parts)!;
+}
 
 export function makeVehicleGeometry(t: VehicleType): BufferGeometry {
   const parts: BufferGeometry[] = [];
@@ -208,6 +239,17 @@ export function makeVehicleGeometry(t: VehicleType): BufferGeometry {
     parts.push(colorize(at(new BoxGeometry(2.6, 0.8, 1.3), 0, 0.6, 0), new Color(0.07, 0.07, 0.07)));
     parts.push(colorize(at(new BoxGeometry(2.2, 0.75, 1.3), -0.1, 1.38, 0), new Color(0.95, 0.78, 0.1)));
     parts.push(colorize(at(new BoxGeometry(0.05, 0.14, 0.2), 1.31, 0.75, 0), new Color(1, 1, 0.9), 1));
+  } else if (t === "ped") {
+    // Low-poly pedestrian (SIMULATED) — torso + head + legs.
+    const shirt = new Color(0.25, 0.4, 0.65);
+    const pants = new Color(0.18, 0.18, 0.22);
+    const skin = new Color(0.72, 0.55, 0.42);
+    parts.push(colorize(at(new BoxGeometry(0.38, 0.55, 0.22), 0, 1.05, 0), shirt));
+    parts.push(colorize(at(new BoxGeometry(0.28, 0.28, 0.28), 0, 1.48, 0), skin));
+    parts.push(colorize(at(new BoxGeometry(0.16, 0.55, 0.16), -0.1, 0.4, 0), pants));
+    parts.push(colorize(at(new BoxGeometry(0.16, 0.55, 0.16), 0.1, 0.4, 0), pants));
+    parts.push(colorize(at(new BoxGeometry(0.12, 0.45, 0.12), -0.28, 1.05, 0), shirt));
+    parts.push(colorize(at(new BoxGeometry(0.12, 0.45, 0.12), 0.28, 1.05, 0), shirt));
   } else {
     parts.push(colorize(at(new BoxGeometry(1.8, 0.55, 0.35), 0, 0.55, 0), W));
     parts.push(colorize(at(new BoxGeometry(0.45, 0.8, 0.45), -0.15, 1.25, 0), new Color(0.15, 0.15, 0.18)));

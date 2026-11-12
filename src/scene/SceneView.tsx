@@ -8,7 +8,7 @@ import {
 } from "@/analytics";
 import { useLiveCityStore } from "@/live/liveCityStore";
 import { useSceneStore } from "@/store/sceneStore";
-import { SceneEngine, type Detail } from "./engine/SceneEngine";
+import { SceneEngine } from "./engine/SceneEngine";
 
 export const LOAD_STAGES = [
   { id: "manifest", label: "Reading the scene plan" },
@@ -19,13 +19,6 @@ export const LOAD_STAGES = [
   { id: "trees", label: "Planting trees" },
   { id: "lighting", label: "Lighting the city" },
 ];
-
-function autoDetail(): Detail {
-  const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-  if (mobile) return "low";
-  const cores = navigator.hardwareConcurrency || 4;
-  return cores >= 8 ? "high" : "medium";
-}
 
 declare global {
   interface Window {
@@ -93,7 +86,8 @@ export function SceneView() {
     window.__pvEngine = engine;
     window.__pvStore = useSceneStore;
     const initial = useSceneStore.getState();
-    const d = initial.detail === "high" ? autoDetail() : initial.detail;
+    // Default is ultra; keep whatever the store says (no auto-downgrade).
+    const d = initial.detail;
     useSceneStore.getState().setDetail(d);
     engine.setDetail(d);
     engine.setTime(initial.timeOfDay);
@@ -110,36 +104,23 @@ export function SceneView() {
       }
     });
 
-    // Live City defaults: everything on (weather FX, vehicles, Live UI).
+    // Always-on city motion: weather FX when raining, vehicles always moving.
     const live0 = useLiveCityStore.getState();
-    engine.setWeatherFxEnabled(live0.weatherFxEnabled);
-    engine.setPreviewRain(live0.previewRain);
-    engine.setTrafficVisible(live0.trafficVisible);
-    engine.setSimSpeed(live0.simSpeed);
-    engine.setTrafficDensity(live0.trafficDensity);
-    engine.setTrafficPaused(live0.trafficPaused);
+    engine.setWeatherFxEnabled(true);
+    engine.setPreviewRain(false);
+    engine.setTrafficVisible(true);
+    engine.setTrafficPaused(false);
+    engine.setSimSpeed(1);
+    engine.setTrafficDensity("heavy");
     if (live0.liveMode) {
       engine.applyLiveSnapshot(live0.snapshot);
       void useLiveCityStore.getState().refresh();
-    } else {
-      // Even without Live panel, keep SIMULATED rain preview + traffic on.
-      engine.setPreviewRain(live0.previewRain);
-      if (live0.previewRain) engine.applyLiveSnapshot(null);
     }
 
     const unsubLive = useLiveCityStore.subscribe((s, prev) => {
       if (s.snapshot !== prev.snapshot || s.liveMode !== prev.liveMode) {
         engine.applyLiveSnapshot(s.liveMode ? s.snapshot : null);
       }
-      if (s.weatherFxEnabled !== prev.weatherFxEnabled) engine.setWeatherFxEnabled(s.weatherFxEnabled);
-      if (s.previewRain !== prev.previewRain) {
-        engine.setPreviewRain(s.previewRain);
-        engine.applyLiveSnapshot(s.liveMode ? s.snapshot : null);
-      }
-      if (s.trafficVisible !== prev.trafficVisible) engine.setTrafficVisible(s.trafficVisible);
-      if (s.simSpeed !== prev.simSpeed) engine.setSimSpeed(s.simSpeed);
-      if (s.trafficDensity !== prev.trafficDensity) engine.setTrafficDensity(s.trafficDensity);
-      if (s.trafficPaused !== prev.trafficPaused) engine.setTrafficPaused(s.trafficPaused);
     });
 
     return () => {

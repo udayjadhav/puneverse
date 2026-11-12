@@ -172,8 +172,9 @@ export function SceneAbout() {
               measurements unless the source is mapped.
             </li>
             <li>
-              Roadside vehicles are <strong>SIMULATED</strong> on OSM roads (procedural). They are not live GPS
-              or congestion.
+              Roadside cars, autos, buses, bikes and pedestrians are <strong>SIMULATED</strong> on OSM roads
+              (procedural). Metros run on OSM metro / light-rail lines and trains on heavy rail — also
+              simulated, not live GPS or timetables.
             </li>
             <li>
               Live City uses free Open-Meteo for weather/rainfall (shared city sample). Rain particles and wet

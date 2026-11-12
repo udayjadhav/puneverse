@@ -70,6 +70,7 @@ import { makeLightPoolMaterial, makePropMaterial } from "./propMaterial";
 import { dayFactor, sunPosition } from "./sun";
 import { TerrainSampler, type TerrainMeta } from "./terrainSampler";
 import { TrafficSystem, type RoadNetwork, type TrafficDensityMode } from "./traffic";
+import { RailTransitSystem, type RailNetwork } from "./railTransit";
 import { TreeSystem } from "./trees";
 import { WeatherSystem } from "./weather";
 import {
@@ -90,6 +91,8 @@ interface DetailCfg {
   shadow: number;
   nearTrees: number;
   traffic: number;
+  /** Simulated metro + train agents on OSM rail. */
+  rail: number;
   roofDist: number;
   /** How far from the camera (m) to keep building chunks resident. */
   streamRadius: number;
@@ -99,10 +102,10 @@ interface DetailCfg {
 
 /** Ultra = richer near-field, not “load all of Pune”. */
 export const DETAIL: Record<Detail, DetailCfg> = {
-  low: { pixelRatio: 1, shadow: 0, nearTrees: 350, traffic: 700, roofDist: 700, streamRadius: 2800, maxChunks: 48 },
-  medium: { pixelRatio: 1.25, shadow: 1024, nearTrees: 650, traffic: 1600, roofDist: 1600, streamRadius: 4200, maxChunks: 90 },
-  high: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1000, traffic: 2800, roofDist: 2800, streamRadius: 5600, maxChunks: 130 },
-  ultra: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1300, traffic: 3600, roofDist: 3800, streamRadius: 7000, maxChunks: 170 },
+  low: { pixelRatio: 1, shadow: 0, nearTrees: 350, traffic: 2200, rail: 36, roofDist: 700, streamRadius: 2800, maxChunks: 48 },
+  medium: { pixelRatio: 1.25, shadow: 1024, nearTrees: 650, traffic: 4500, rail: 64, roofDist: 1600, streamRadius: 4200, maxChunks: 90 },
+  high: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1000, traffic: 7000, rail: 100, roofDist: 2800, streamRadius: 5600, maxChunks: 130 },
+  ultra: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1300, traffic: 9000, rail: 140, roofDist: 3800, streamRadius: 7000, maxChunks: 170 },
 };
 
 export interface EngineEvents {
@@ -137,13 +140,13 @@ interface ChunkRecord {
 }
 
 /** Launch like Mumbai’s opening oblique — low pitch = side skyline, not roof plan. */
-/** Closer launch so simulated traffic and weather FX are readable. */
-export const LAUNCH = { x: -120, y: 80, dist: 720, pitch: 28, bearing: 42 };
+/** Street-readable launch so moving vehicles are obvious on nearby roads. */
+export const LAUNCH = { x: -120, y: 80, dist: 380, pitch: 36, bearing: 42 };
 
 /** Per-place side views (bearing degrees, 0 = look north). Mimics Worli / Sea Link chips. */
 const FLY_VIEW: Record<string, { dist: number; pitch: number; bearing: number }> = {
-  "Shaniwar Wada": { dist: 900, pitch: 16, bearing: 48 },
-  "Dagdusheth Ganpati": { dist: 520, pitch: 14, bearing: 30 },
+  "Shaniwar Wada": { dist: 420, pitch: 34, bearing: 48 },
+  "Dagdusheth Ganpati": { dist: 360, pitch: 32, bearing: 30 },
   "Pune Station": { dist: 1100, pitch: 15, bearing: 200 },
   "Bund Garden": { dist: 1200, pitch: 14, bearing: 220 },
   "Bund Garden Bridge": { dist: 1000, pitch: 12, bearing: 230 },
@@ -181,6 +184,7 @@ export class SceneEngine {
   private labels: LabelLayer;
   private trees: TreeSystem;
   private traffic: TrafficSystem | null = null;
+  private railTransit: RailTransitSystem | null = null;
   private weather: WeatherSystem;
   private weatherParams: WeatherSimParams = { ...CLEAR_WEATHER };
   private lastLiveSnap: LiveSnapshot | null = null;
@@ -188,6 +192,7 @@ export class SceneEngine {
   private sunBaseIntensity = 1;
   private hemiBaseIntensity = 0.3;
   private network: RoadNetwork | null = null;
+  private railNetwork: RailNetwork | null = null;
   private trafficVisible = true;
   private weatherFxEnabled = true;
   private previewRain = false;
@@ -202,7 +207,7 @@ export class SceneEngine {
   private reqId = 0;
   private raf = 0;
   private disposed = false;
-  private detail: Detail = "high";
+  private detail: Detail = "ultra";
   private hour = 16.9;
   private envHour = -99;
   private lastReadout = 0;
@@ -620,6 +625,21 @@ export class SceneEngine {
     pool.name = "lightPools";
     this.scene.add(lampMesh, pool);
     this.network = net.roads;
+    this.railNetwork = net.rails;
+  }
+
+  private disposeAgentGroup(sys: { group: Group } | null) {
+    if (!sys) return;
+    this.scene.remove(sys.group);
+    sys.group.traverse((o) => {
+      const m = o as Mesh;
+      if (m.isMesh) {
+        m.geometry?.dispose();
+        const mat = m.material;
+        if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
+        else (mat as { dispose?: () => void } | undefined)?.dispose?.();
+      }
+    });
   }
 
   private ingestChunk(ix: number, iy: number, r: ChunkResult) {
@@ -850,24 +870,21 @@ export class SceneEngine {
     this.trees.castShadows = cfg.shadow > 0;
     this.weather.setDetail(d);
     if (this.network && (!this.traffic || this.traffic.count !== cfg.traffic)) {
-      if (this.traffic) {
-        this.scene.remove(this.traffic.group);
-        this.traffic.group.traverse((o) => {
-          const m = o as Mesh;
-          if (m.isMesh) {
-            m.geometry?.dispose();
-            const mat = m.material;
-            if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
-            else (mat as { dispose?: () => void } | undefined)?.dispose?.();
-          }
-        });
-        this.traffic = null;
-      }
+      this.disposeAgentGroup(this.traffic);
+      this.traffic = null;
       this.traffic = new TrafficSystem(this.network, this.u, cfg.traffic);
       this.traffic.setVisible(this.trafficVisible);
       this.traffic.setSimSpeed(this.simSpeed);
       this.traffic.setDensityMode(this.trafficDensity);
       this.scene.add(this.traffic.group);
+    }
+    if (this.railNetwork && (!this.railTransit || this.railTransit.count !== cfg.rail)) {
+      this.disposeAgentGroup(this.railTransit);
+      this.railTransit = null;
+      this.railTransit = new RailTransitSystem(this.railNetwork, this.u, cfg.rail);
+      this.railTransit.setVisible(this.trafficVisible);
+      this.railTransit.setSimSpeed(this.simSpeed);
+      this.scene.add(this.railTransit.group);
     }
     this.resize();
   }
@@ -899,11 +916,13 @@ export class SceneEngine {
   setTrafficVisible(on: boolean) {
     this.trafficVisible = on;
     this.traffic?.setVisible(on);
+    this.railTransit?.setVisible(on);
   }
 
   setSimSpeed(s: number) {
     this.simSpeed = s;
     this.traffic?.setSimSpeed(s);
+    this.railTransit?.setSimSpeed(s);
   }
 
   setTrafficDensity(mode: TrafficDensityMode) {
@@ -913,6 +932,7 @@ export class SceneEngine {
 
   setTrafficPaused(on: boolean) {
     this.traffic?.setPaused(on);
+    this.railTransit?.setPaused(on);
   }
 
   getWeatherParams() {
@@ -1020,7 +1040,8 @@ export class SceneEngine {
     this.rig.update(dt);
     this.updateShadowFrustum();
     this.trees.update(this.camera.position);
-    this.traffic?.update(dt);
+    this.traffic?.update(dt, this.camera.position.x, this.camera.position.z);
+    this.railTransit?.update(dt, this.camera.position.x, this.camera.position.z);
     this.weather.update(dt, this.camera.position);
     // Lightning flash (only when thunderstorm params say so) — additive on base.
     const flash = this.weather.getLightningFlash();
@@ -1093,6 +1114,7 @@ export class SceneEngine {
       chunks: this.chunkMap.size,
       trees: this.trees.total,
       vehicles: this.traffic?.count ?? 0,
+      railVehicles: this.railTransit?.count ?? 0,
       reversedDepth: this.reversedDepth,
       streamRadius: DETAIL[this.detail].streamRadius,
       maxChunks: DETAIL[this.detail].maxChunks,
@@ -1119,19 +1141,10 @@ export class SceneEngine {
     this.chunkMap.clear();
     this.builtList = [];
     this.trees.clear();
-    if (this.traffic) {
-      this.scene.remove(this.traffic.group);
-      this.traffic.group.traverse((o) => {
-        const m = o as Mesh;
-        if (m.isMesh) {
-          m.geometry?.dispose();
-          const mat = m.material;
-          if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
-          else (mat as { dispose?: () => void } | undefined)?.dispose?.();
-        }
-      });
-      this.traffic = null;
-    }
+    this.disposeAgentGroup(this.traffic);
+    this.traffic = null;
+    this.disposeAgentGroup(this.railTransit);
+    this.railTransit = null;
     this.scene.remove(this.weather.group);
     this.weather.dispose();
     this.scene.traverse((o) => {
@@ -1169,6 +1182,7 @@ interface NetworkResult {
   roadRibbon: RibbonArrays;
   railRibbon: RibbonArrays;
   roads: RoadNetwork & { pier: Float32Array; lamp: Float32Array };
+  rails: RailNetwork;
   railPier: Float32Array;
 }
 

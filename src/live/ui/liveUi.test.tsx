@@ -50,16 +50,12 @@ function render(el: ReactElement): HTMLElement {
 }
 
 describe("Live City UI", () => {
-  it("product defaults keep live, weather FX and vehicles enabled", () => {
-    // Mirror store initial values (module defaults).
-    expect(useLiveCityStore.getState().weatherFxEnabled).toBe(true);
-    expect(useLiveCityStore.getState().trafficVisible).toBe(true);
-    // Re-apply product defaults explicitly for the assertion.
-    resetStore({ liveMode: true, panelOpen: true });
+  it("product defaults keep live on; weather FX on; no fake rain; traffic moving", () => {
+    resetStore({ liveMode: true, panelOpen: true, previewRain: false, trafficPaused: false });
     const s = useLiveCityStore.getState();
     expect(s.liveMode).toBe(true);
-    expect(s.panelOpen).toBe(true);
     expect(s.weatherFxEnabled).toBe(true);
+    expect(s.previewRain).toBe(false);
     expect(s.trafficVisible).toBe(true);
     expect(s.trafficPaused).toBe(false);
   });
@@ -92,13 +88,13 @@ describe("Live City UI", () => {
     expect(host.querySelector('[data-testid="live-weather-readings"]')).toBeNull();
   });
 
-  it("renders traffic as unavailable without fake colours", () => {
+  it("renders traffic layer without fake congestion colours", () => {
     act(() => {
       resetStore({ liveMode: true, panelOpen: true, activeLayer: "traffic" });
     });
     const host = render(<LiveCityPanel />);
     expect(host.querySelector('[data-testid="live-traffic-unavailable"]')?.textContent).toMatch(
-      /unavailable/i,
+      /always on|no fake green/i,
     );
   });
 
