@@ -5,15 +5,33 @@
  * the shader (disclosed as generated in About).
  */
 
-import { Color, MeshStandardMaterial, type Texture } from "three";
+import { Color, MeshStandardMaterial, Vector2, type Texture } from "three";
 
 export interface SharedUniforms {
   uTime: { value: number };
   uNight: { value: number };
+  /** 0..1 road/building wetness from live weather. */
+  uWet: { value: number };
+  /** 0..1 precipitation intensity (visual). */
+  uPrecip: { value: number };
+  /** 0..1 wind strength for foliage. */
+  uWindStrength: { value: number };
+  /** Wind direction on XZ (unit-ish). */
+  uWindDir: { value: Vector2 };
+  /** Lightning flash 0..1. */
+  uLightning: { value: number };
 }
 
 export function makeSharedUniforms(): SharedUniforms {
-  return { uTime: { value: 0 }, uNight: { value: 0 } };
+  return {
+    uTime: { value: 0 },
+    uNight: { value: 0 },
+    uWet: { value: 0 },
+    uPrecip: { value: 0 },
+    uWindStrength: { value: 0 },
+    uWindDir: { value: new Vector2(1, 0) },
+    uLightning: { value: 0 },
+  };
 }
 
 const NOISE_GLSL = /* glsl */ `
@@ -64,6 +82,7 @@ export function makeBuildingMaterial(u: SharedUniforms): MeshStandardMaterial {
   const m = new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.0 });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = u.uNight;
+    shader.uniforms.uWet = u.uWet;
     addWorldPos(shader);
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -85,6 +104,7 @@ varying vec4 vBData;`,
         "#include <common>",
         `#include <common>
 uniform float uNight;
+uniform float uWet;
 varying vec2 vFacade;
 varying vec4 vBData;`,
       )
@@ -221,6 +241,11 @@ varying vec4 vBData;`,
     float cope = smoothstep(0.0, 0.35, fract(vFacade.y * 2.0));
     pvBase *= 0.78 + 0.08 * cope;
   }
+  float wetB = clamp(uWet, 0.0, 1.0);
+  if (pvPart < 0.5) {
+    pvBase *= 1.0 - 0.12 * wetB;
+    pvRough = mix(pvRough, 0.35, wetB * 0.5);
+  }
   diffuseColor.rgb = pvBase;`,
       )
       .replace(
@@ -234,7 +259,7 @@ varying vec4 vBData;`,
   totalEmissiveRadiance += pvLitColor * pvLit * uNight * 1.15;`,
       );
   };
-  m.customProgramCacheKey = () => "pv-building-v2";
+  m.customProgramCacheKey = () => "pv-building-wet-v1";
   return m;
 }
 
@@ -318,6 +343,7 @@ export function makeRoadMaterial(u: SharedUniforms): MeshStandardMaterial {
   const m = new MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = u.uNight;
+    shader.uniforms.uWet = u.uWet;
     addWorldPos(shader);
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -338,6 +364,7 @@ varying vec4 vRData;`,
         "#include <common>",
         `#include <common>
 uniform float uNight;
+uniform float uWet;
 varying vec2 vRoadUv;
 varying vec4 vRData;`,
       )
@@ -392,6 +419,16 @@ varying vec4 vRData;`,
     if (cls < 2.5) c = mix(c, vec3(0.55, 0.53, 0.50), pvBox(abs(across), 0.955, 1.01, fa));
     rough = 0.85;
   }
+  // Wet roads: darker asphalt, lower roughness — not a mirror.
+  float wet = clamp(uWet, 0.0, 1.0);
+  if (part < 0.5 && cls < 9.5) {
+    c *= 1.0 - 0.22 * wet;
+    rough = mix(rough, 0.28, wet * 0.85);
+    // Subtle puddle patches (noise), not full-surface mirror.
+    float puddle = smoothstep(0.62, 0.78, pvFbm(vPvWorld.xz * 0.35));
+    rough = mix(rough, 0.18, puddle * wet * 0.55);
+    c *= 1.0 - puddle * wet * 0.12;
+  }
   diffuseColor.rgb = pow(c, vec3(2.2));`,
       )
       .replace(
@@ -400,6 +437,6 @@ varying vec4 vRData;`,
   roughnessFactor = rough;`,
       );
   };
-  m.customProgramCacheKey = () => "pv-road";
+  m.customProgramCacheKey = () => "pv-road-wet-v1";
   return m;
 }

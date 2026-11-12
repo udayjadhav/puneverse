@@ -100,7 +100,8 @@
     "attribution": "Map data © OpenStreetMap contributors (ODbL). Building footprints © Overture Maps Foundation (ODbL), including Google Open Buildings (CC BY 4.0) and Microsoft Global ML Building Footprints (ODbL). Heights: OSM tags, GlobalBuildingAtlas, GHSL where labelled. Terrain: Copernicus DEM GLO-30. Ground: Sentinel-2. Trees in the 3D scene: WorldCover-driven placement (not surveyed stems). 2D basemap: OpenFreeMap / MapLibre demo. SAMPLE admin is illustrative geometry.",
     "camera": "Default view is the Three.js 3D twin. Use “2D map” for MapLibre. Flat/reset controls on the 2D map tilt buildings for OSM-known heights only.",
     "terrain": "3D hills use Copernicus DEM (~30 m). 2D map terrain (if enabled) uses public terrarium tiles at true scale.",
-    "trees": "3D scene trees are generated from WorldCover candidates (not individual surveyed trees). On the 2D map, tree markers are OSM natural=tree only."
+    "trees": "3D scene trees are generated from WorldCover candidates (not individual surveyed trees). On the 2D map, tree markers are OSM natural=tree only.",
+    "live_city": "Live City uses free Open-Meteo weather and rainfall (shared city sample, CC-BY 4.0) and CAMS model air quality labelled as model — not CPCB stations. Live road congestion is unavailable without a free speed feed; generated roadside vehicles are not traffic. Attribution: Open-Meteo."
   },
   "attribution": {
     "osm": "© OpenStreetMap contributors",

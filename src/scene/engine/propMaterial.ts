@@ -24,6 +24,9 @@ export function makePropMaterial(
   const m = new MeshStandardMaterial({ vertexColors: true, roughness: opts.roughness ?? 0.8, metalness: 0 });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.uNight = u.uNight;
+    shader.uniforms.uTime = u.uTime;
+    shader.uniforms.uWindStrength = u.uWindStrength;
+    shader.uniforms.uWindDir = u.uWindDir;
     if (opts.cull) {
       shader.uniforms.uCam = opts.cull.uCam;
       shader.uniforms.uNearR = opts.cull.uNearR;
@@ -35,7 +38,25 @@ export function makePropMaterial(
 attribute float glow;
 varying float vGlow;
 varying vec3 vPropW;
+uniform float uTime;
+uniform float uWindStrength;
+uniform vec2 uWindDir;
 ${opts.cull ? "uniform vec3 uCam; uniform float uNearR;" : ""}`,
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+  ${
+    opts.leaf
+      ? `{
+    float h = max(0.0, transformed.y);
+    float sway = uWindStrength * h * 0.12;
+    float phase = uTime * (1.2 + uWindStrength) + transformed.x * 0.15 + transformed.z * 0.11;
+    transformed.x += uWindDir.x * sway * sin(phase);
+    transformed.z += uWindDir.y * sway * sin(phase * 0.93 + 1.1);
+  }`
+      : ""
+  }`,
       )
       .replace(
         "#include <project_vertex>",
@@ -97,7 +118,7 @@ float ppNoise(vec2 p) {
   }`,
       );
   };
-  m.customProgramCacheKey = () => `pv-prop-${opts.leaf ? 1 : 0}-${opts.cull ? 1 : 0}`;
+  m.customProgramCacheKey = () => `pv-prop-wind-v1-${opts.leaf ? 1 : 0}-${opts.cull ? 1 : 0}`;
   return m;
 }
 

@@ -69,10 +69,18 @@ import { computeAabbs, PickIndex } from "./pick";
 import { makeLightPoolMaterial, makePropMaterial } from "./propMaterial";
 import { dayFactor, sunPosition } from "./sun";
 import { TerrainSampler, type TerrainMeta } from "./terrainSampler";
-import { TrafficSystem, type RoadNetwork } from "./traffic";
+import { TrafficSystem, type RoadNetwork, type TrafficDensityMode } from "./traffic";
 import { TreeSystem } from "./trees";
+import { WeatherSystem } from "./weather";
+import {
+  CLEAR_WEATHER,
+  weatherParamsFromSnapshot,
+  withPreviewRain,
+  type WeatherSimParams,
+} from "./weatherMap";
 import { chunkKey, selectResidentChunks } from "./stream";
 import { attachClickGesture, type ClickGesture } from "@/analytics/clickDetect";
+import type { LiveSnapshot } from "@/live/types";
 import { HEIGHT_SOURCES, KIND_NAMES, type ChunkInfo, type PickedBuilding, type Preset, type SceneManifest } from "../types";
 
 export type Detail = "low" | "medium" | "high" | "ultra";
@@ -91,10 +99,10 @@ interface DetailCfg {
 
 /** Ultra = richer near-field, not “load all of Pune”. */
 export const DETAIL: Record<Detail, DetailCfg> = {
-  low: { pixelRatio: 1, shadow: 0, nearTrees: 350, traffic: 400, roofDist: 700, streamRadius: 2800, maxChunks: 48 },
-  medium: { pixelRatio: 1.25, shadow: 1024, nearTrees: 650, traffic: 1200, roofDist: 1600, streamRadius: 4200, maxChunks: 90 },
-  high: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1000, traffic: 2200, roofDist: 2800, streamRadius: 5600, maxChunks: 130 },
-  ultra: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1300, traffic: 2800, roofDist: 3800, streamRadius: 7000, maxChunks: 170 },
+  low: { pixelRatio: 1, shadow: 0, nearTrees: 350, traffic: 700, roofDist: 700, streamRadius: 2800, maxChunks: 48 },
+  medium: { pixelRatio: 1.25, shadow: 1024, nearTrees: 650, traffic: 1600, roofDist: 1600, streamRadius: 4200, maxChunks: 90 },
+  high: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1000, traffic: 2800, roofDist: 2800, streamRadius: 5600, maxChunks: 130 },
+  ultra: { pixelRatio: 1.5, shadow: 2048, nearTrees: 1300, traffic: 3600, roofDist: 3800, streamRadius: 7000, maxChunks: 170 },
 };
 
 export interface EngineEvents {
@@ -129,7 +137,8 @@ interface ChunkRecord {
 }
 
 /** Launch like Mumbai’s opening oblique — low pitch = side skyline, not roof plan. */
-export const LAUNCH = { x: -350, y: 150, dist: 2400, pitch: 18, bearing: 38 };
+/** Closer launch so simulated traffic and weather FX are readable. */
+export const LAUNCH = { x: -120, y: 80, dist: 720, pitch: 28, bearing: 42 };
 
 /** Per-place side views (bearing degrees, 0 = look north). Mimics Worli / Sea Link chips. */
 const FLY_VIEW: Record<string, { dist: number; pitch: number; bearing: number }> = {
@@ -172,7 +181,18 @@ export class SceneEngine {
   private labels: LabelLayer;
   private trees: TreeSystem;
   private traffic: TrafficSystem | null = null;
+  private weather: WeatherSystem;
+  private weatherParams: WeatherSimParams = { ...CLEAR_WEATHER };
+  private lastLiveSnap: LiveSnapshot | null = null;
+  private baseFogDensity = 0.00007;
+  private sunBaseIntensity = 1;
+  private hemiBaseIntensity = 0.3;
   private network: RoadNetwork | null = null;
+  private trafficVisible = true;
+  private weatherFxEnabled = true;
+  private previewRain = false;
+  private simSpeed = 1;
+  private trafficDensity: TrafficDensityMode = "heavy";
   private chunkMap = new Map<string, ChunkRecord>();
   private builtList: ChunkRecord[] = [];
   private pickIndex = new PickIndex();
@@ -245,6 +265,8 @@ export class SceneEngine {
 
     this.trees = new TreeSystem(this.u);
     this.scene.add(this.trees.group);
+    this.weather = new WeatherSystem(this.u);
+    this.scene.add(this.weather.group);
 
     const rt = new WebGLRenderTarget(1, 1, { type: HalfFloatType, samples: 4 });
     rt.depthTexture = new DepthTexture(1, 1, FloatType);
@@ -756,10 +778,11 @@ export class SceneEngine {
     // Soft haze, muted Midday (never blown-out), warm golden-hour sun.
     const noon = Math.max(0, Math.min(1, (s.elevation - 10) / 55));
     const low = Math.max(0, 1 - Math.max(0, s.elevation) / 25);
+    const cloudBoost = this.weatherFxEnabled ? this.weatherParams.cloudPct * 0.08 : 0;
     for (const sk of [this.sky, this.envSky]) {
       const su = sk.material.uniforms;
       su.sunPosition.value.copy(dir.y < -0.05 ? new Vector3(dir.x, -0.05, dir.z) : dir);
-      su.turbidity.value = 6.5 + noon * 3.5 + low * 2.5;
+      su.turbidity.value = 6.5 + noon * 3.5 + low * 2.5 + cloudBoost;
       su.rayleigh.value = 1.05 + (1 - day) * 1.15 + noon * 0.25 + low * 0.35;
       su.mieCoefficient.value = 0.004 + noon * 0.0025 + low * 0.002;
       su.mieDirectionalG.value = 0.78 + low * 0.06;
@@ -767,16 +790,26 @@ export class SceneEngine {
     const sunCol = new Color(1, 0.95, 0.88).lerp(new Color(1, 0.55, 0.26), low * 0.92);
     this.sun.color.copy(sunCol);
     // Cap Midday hard — keep sand tones, never blown white.
-    this.sun.intensity = (1.0 + 0.4 * day) * (1 - 0.42 * noon) * (0.85 + 0.15 * (1 - night));
-    this.hemi.intensity = 0.1 + 0.2 * day * (1 - 0.28 * noon);
+    this.sunBaseIntensity =
+      (1.0 + 0.4 * day) * (1 - 0.42 * noon) * (0.85 + 0.15 * (1 - night));
+    this.hemiBaseIntensity = 0.1 + 0.2 * day * (1 - 0.28 * noon);
+    const darkMul = 1 - (this.weatherFxEnabled ? this.weatherParams.skyDarken : 0) * 0.55;
+    this.sun.intensity = this.sunBaseIntensity * darkMul;
+    this.hemi.intensity = this.hemiBaseIntensity * (1 - (this.weatherFxEnabled ? this.weatherParams.skyDarken : 0) * 0.35);
     this.hemi.color.set(day > 0.3 ? 0xb6c0ce : 0x2c3a55);
     this.hemi.groundColor.set(day > 0.3 ? 0x5a4c3c : 0x121018);
     const fogDay = new Color(0.64, 0.7, 0.76).lerp(new Color(0.9, 0.66, 0.44), low * day * 0.8);
     const fogNight = new Color(0.015, 0.02, 0.035);
     (this.scene.fog as FogExp2).color.copy(fogNight.lerp(fogDay, day));
     // Atmospheric depth: mild midday haze; clearer night so selective windows read.
-    (this.scene.fog as FogExp2).density = 0.00007 + noon * 0.000055 + night * 0.000012 + low * 0.00002;
+    // Live weather adds fogBoost / skyDarken without inventing readings.
+    this.baseFogDensity = 0.00007 + noon * 0.000055 + night * 0.000012 + low * 0.00002;
+    const dark = this.weatherFxEnabled ? this.weatherParams.skyDarken : 0;
+    const fogExtra = this.weatherFxEnabled ? this.weatherParams.fogBoost : 0;
+    (this.scene.fog as FogExp2).density = this.baseFogDensity + fogExtra;
+    void dark;
     this.renderer.toneMappingExposure = 0.56 + 0.12 * day * (1 - 0.5 * noon) + 0.1 * night;
+    this.renderer.toneMappingExposure *= 1 - (this.weatherFxEnabled ? this.weatherParams.skyDarken : 0) * 0.25;
     this.envNoon = noon;
     // Subtle night bloom — avoid sky/lamp wash.
     this.bloom.strength = 0.05 + night * 0.42 + low * day * 0.08;
@@ -815,6 +848,7 @@ export class SceneEngine {
     }
     this.trees.setNearRadius(cfg.nearTrees);
     this.trees.castShadows = cfg.shadow > 0;
+    this.weather.setDetail(d);
     if (this.network && (!this.traffic || this.traffic.count !== cfg.traffic)) {
       if (this.traffic) {
         this.scene.remove(this.traffic.group);
@@ -830,9 +864,59 @@ export class SceneEngine {
         this.traffic = null;
       }
       this.traffic = new TrafficSystem(this.network, this.u, cfg.traffic);
+      this.traffic.setVisible(this.trafficVisible);
+      this.traffic.setSimSpeed(this.simSpeed);
+      this.traffic.setDensityMode(this.trafficDensity);
       this.scene.add(this.traffic.group);
     }
     this.resize();
+  }
+
+  /** Apply Live City snapshot → weather FX. Optional SIMULATED rain preview when dry. */
+  applyLiveSnapshot(snap: LiveSnapshot | null) {
+    this.lastLiveSnap = snap;
+    const live = weatherParamsFromSnapshot(snap);
+    const params = withPreviewRain(live, this.previewRain);
+    this.weatherParams = params;
+    this.weather.setEnabled(this.weatherFxEnabled);
+    this.weather.setParams(this.weatherFxEnabled ? params : { ...CLEAR_WEATHER, provenance: params.provenance });
+    this.setTime(this.hour);
+  }
+
+  setWeatherFxEnabled(on: boolean) {
+    this.weatherFxEnabled = on;
+    this.weather.setEnabled(on);
+    if (!on) this.weather.setParams({ ...CLEAR_WEATHER });
+    else this.weather.setParams(this.weatherParams);
+    this.setTime(this.hour);
+  }
+
+  setPreviewRain(on: boolean) {
+    this.previewRain = on;
+    this.applyLiveSnapshot(this.lastLiveSnap);
+  }
+
+  setTrafficVisible(on: boolean) {
+    this.trafficVisible = on;
+    this.traffic?.setVisible(on);
+  }
+
+  setSimSpeed(s: number) {
+    this.simSpeed = s;
+    this.traffic?.setSimSpeed(s);
+  }
+
+  setTrafficDensity(mode: TrafficDensityMode) {
+    this.trafficDensity = mode;
+    this.traffic?.setDensityMode(mode);
+  }
+
+  setTrafficPaused(on: boolean) {
+    this.traffic?.setPaused(on);
+  }
+
+  getWeatherParams() {
+    return this.weatherParams;
   }
 
   setDetail(d: Detail) {
@@ -937,6 +1021,14 @@ export class SceneEngine {
     this.updateShadowFrustum();
     this.trees.update(this.camera.position);
     this.traffic?.update(dt);
+    this.weather.update(dt, this.camera.position);
+    // Lightning flash (only when thunderstorm params say so) — additive on base.
+    const flash = this.weather.getLightningFlash();
+    const darkMul = 1 - (this.weatherFxEnabled ? this.weatherParams.skyDarken : 0) * 0.55;
+    this.sun.intensity = this.sunBaseIntensity * darkMul + flash * 4.5;
+    this.hemi.intensity =
+      this.hemiBaseIntensity * (1 - (this.weatherFxEnabled ? this.weatherParams.skyDarken : 0) * 0.35) +
+      flash * 1.2;
     const roofDist = DETAIL[this.detail].roofDist;
     for (const c of this.chunkMap.values()) c.props.visible = c.center.distanceTo(this.camera.position) < roofDist;
     if (this.frames % 30 === 0) void this.syncChunks(false);
@@ -1040,6 +1132,8 @@ export class SceneEngine {
       });
       this.traffic = null;
     }
+    this.scene.remove(this.weather.group);
+    this.weather.dispose();
     this.scene.traverse((o) => {
       const m = o as Mesh;
       if (m.isMesh) {

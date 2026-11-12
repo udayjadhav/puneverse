@@ -12,6 +12,8 @@ English UI. Open data only. No paid tile APIs, no Overpass in the live path.
 
 Private product analytics (PostHog) are optional and consent-gated — see [docs/ANALYTICS.md](docs/ANALYTICS.md). Nothing visitor-facing is shown in the app.
 
+**Live City** uses free Open-Meteo for weather/rainfall (and labelled CAMS model AQI). Live congestion stays unavailable. See [docs/LIVE_CITY.md](docs/LIVE_CITY.md) and [docs/LIVE_CITY_FREE_DATA.md](docs/LIVE_CITY_FREE_DATA.md). No fabricated readings. Not deployed until you approve.
+
 ---
 
 ## What’s in the scene (baked S0)

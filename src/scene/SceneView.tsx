@@ -6,6 +6,7 @@ import {
   PV_EVENTS,
   track,
 } from "@/analytics";
+import { useLiveCityStore } from "@/live/liveCityStore";
 import { useSceneStore } from "@/store/sceneStore";
 import { SceneEngine, type Detail } from "./engine/SceneEngine";
 
@@ -69,6 +70,15 @@ export function SceneView() {
           building_height_m: info.height,
           height_source: info.source,
         });
+        const readout = useSceneStore.getState().readout;
+        if (useLiveCityStore.getState().liveMode) {
+          useLiveCityStore.getState().setLocation({
+            label: info.name || info.kind,
+            kind: "building",
+            lon: readout?.lon ?? null,
+            lat: readout?.lat ?? null,
+          });
+        }
       },
       fps: (f) => useSceneStore.getState().setFps(f),
       cameraSample: ({ dist, pitch }) => {
@@ -99,8 +109,42 @@ export function SceneView() {
         useSceneStore.getState().requestFlyTo(null);
       }
     });
+
+    // Live City defaults: everything on (weather FX, vehicles, Live UI).
+    const live0 = useLiveCityStore.getState();
+    engine.setWeatherFxEnabled(live0.weatherFxEnabled);
+    engine.setPreviewRain(live0.previewRain);
+    engine.setTrafficVisible(live0.trafficVisible);
+    engine.setSimSpeed(live0.simSpeed);
+    engine.setTrafficDensity(live0.trafficDensity);
+    engine.setTrafficPaused(live0.trafficPaused);
+    if (live0.liveMode) {
+      engine.applyLiveSnapshot(live0.snapshot);
+      void useLiveCityStore.getState().refresh();
+    } else {
+      // Even without Live panel, keep SIMULATED rain preview + traffic on.
+      engine.setPreviewRain(live0.previewRain);
+      if (live0.previewRain) engine.applyLiveSnapshot(null);
+    }
+
+    const unsubLive = useLiveCityStore.subscribe((s, prev) => {
+      if (s.snapshot !== prev.snapshot || s.liveMode !== prev.liveMode) {
+        engine.applyLiveSnapshot(s.liveMode ? s.snapshot : null);
+      }
+      if (s.weatherFxEnabled !== prev.weatherFxEnabled) engine.setWeatherFxEnabled(s.weatherFxEnabled);
+      if (s.previewRain !== prev.previewRain) {
+        engine.setPreviewRain(s.previewRain);
+        engine.applyLiveSnapshot(s.liveMode ? s.snapshot : null);
+      }
+      if (s.trafficVisible !== prev.trafficVisible) engine.setTrafficVisible(s.trafficVisible);
+      if (s.simSpeed !== prev.simSpeed) engine.setSimSpeed(s.simSpeed);
+      if (s.trafficDensity !== prev.trafficDensity) engine.setTrafficDensity(s.trafficDensity);
+      if (s.trafficPaused !== prev.trafficPaused) engine.setTrafficPaused(s.trafficPaused);
+    });
+
     return () => {
       unsub();
+      unsubLive();
       engine.dispose();
       engineRef.current = null;
       if (window.__pvEngine === engine) delete window.__pvEngine;

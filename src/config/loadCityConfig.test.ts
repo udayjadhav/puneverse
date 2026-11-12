@@ -51,6 +51,7 @@ describe("loadCityConfig", () => {
     expect(honesty.camera ?? "").toMatch(/3D|Three/i);
     expect((honesty.terrain ?? "").toLowerCase()).toMatch(/dem|terrain|copernicus/);
     expect((honesty.trees ?? "").toLowerCase()).toMatch(/worldcover|tree/);
+    expect((honesty.live_city ?? "").toLowerCase()).toMatch(/live|provider|unavailable|never invent/);
   });
 
   it("marks buildings/roads/water/parks ready; admin sample; terrain at true scale", () => {

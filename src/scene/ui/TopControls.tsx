@@ -1,4 +1,5 @@
 import { noteMeaningfulInteraction, PV_EVENTS, track } from "@/analytics";
+import { useLiveCityStore } from "@/live/liveCityStore";
 import { useSceneStore, type DetailLevel } from "@/store/sceneStore";
 import { PANEL, PILL, PILL_ACTIVE } from "./styles";
 
@@ -16,9 +17,24 @@ export function TopControls() {
   const setDetail = useSceneStore((s) => s.setDetail);
   const setView = useSceneStore((s) => s.setView);
   const setAboutOpen = useSceneStore((s) => s.setAboutOpen);
+  const liveMode = useLiveCityStore((s) => s.liveMode);
+  const toggleLive = useLiveCityStore((s) => s.toggleLiveMode);
 
   return (
     <div className={`${PANEL} absolute top-3 right-3 flex items-center gap-1.5 px-2 py-1.5`} data-testid="top-controls">
+      <button
+        type="button"
+        className={`${PILL} ${liveMode ? PILL_ACTIVE : ""}`}
+        aria-pressed={liveMode}
+        onClick={() => {
+          toggleLive();
+          noteMeaningfulInteraction();
+        }}
+        data-testid="live-city-toggle"
+        title="Live city layers use real providers only — never invented readings"
+      >
+        Live
+      </button>
       <button
         type="button"
         className={`${PILL} ${labels ? PILL_ACTIVE : ""}`}

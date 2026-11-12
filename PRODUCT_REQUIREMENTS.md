@@ -22,9 +22,16 @@ A trustworthy, recognisable, interactive **3D digital city of Pune** that ordina
 - Cesium migration
 - Fabricated building names or fake “surveyed” heights
 - Speculative historical reconstructions without sources
-- Live traffic / unofficial metro as if approved
-- Paid cloud datasets without explicit approval
+- Presenting simulated vehicles or invented AQI/weather/traffic as live conditions
+- Paid cloud datasets / provider keys without explicit approval
 - Claiming verified full PMC ∪ PCMC coverage
+
+## Live City (zero-cost)
+
+- Free sources only — see `docs/LIVE_CITY_FREE_DATA.md`
+- Open-Meteo weather / rainfall (+ CAMS model AQI, clearly labelled)
+- Live congestion: unavailable (no paid TomTom/HERE; no fake colours)
+- Do not deploy without approval
 
 ## Success criteria
 

@@ -118,6 +118,11 @@ export function AboutPanel() {
           <li>
             <strong className="text-slate-100">Status:</strong> {h.ship_hold}
           </li>
+          {h.live_city ? (
+            <li>
+              <strong className="text-slate-100">Live City:</strong> {h.live_city}
+            </li>
+          ) : null}
           <li>
             <DataViewToggle />
           </li>

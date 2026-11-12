@@ -19,6 +19,8 @@ export interface HonestyCopy {
   camera?: string;
   terrain?: string;
   trees?: string;
+  /** Live City overlays — real providers only */
+  live_city?: string;
 }
 
 export interface TerrainConfig {

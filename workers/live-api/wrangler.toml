@@ -1,0 +1,10 @@
+name = "puneverse-live-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Zero-cost providers: Open-Meteo needs no secret.
+# Optional Phase 2:
+#   npx wrangler secret put OPENAQ_API_KEY
+
+[vars]
+ALLOW_ORIGIN = "https://udayjadhav.github.io,http://127.0.0.1:5173,http://localhost:5173"

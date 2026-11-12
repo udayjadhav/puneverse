@@ -1,4 +1,5 @@
 import { noteMeaningfulInteraction, PV_EVENTS, timeOfDayBucket, track } from "@/analytics";
+import { useLiveCityStore } from "@/live/liveCityStore";
 import { landmarkContentFor } from "@/scene/landmarks/content";
 import { TIME_PRESETS, useSceneStore } from "@/store/sceneStore";
 import { formatClock } from "./heightBreakdown";
@@ -31,6 +32,15 @@ export function BottomBar() {
                   kind: p.kind,
                   content,
                 });
+                if (useLiveCityStore.getState().liveMode) {
+                  const readout = useSceneStore.getState().readout;
+                  useLiveCityStore.getState().setLocation({
+                    label: p.label,
+                    kind: "place",
+                    lon: readout?.lon ?? null,
+                    lat: readout?.lat ?? null,
+                  });
+                }
                 noteMeaningfulInteraction();
                 track(PV_EVENTS.place_selected, {
                   view: "scene",

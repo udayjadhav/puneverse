@@ -171,7 +171,15 @@ export function SceneAbout() {
               Most heights are <em>estimates</em> (satellite / area / floors / default) — never presented as surveyed
               measurements unless the source is mapped.
             </li>
-            <li>Generated details (windows, tanks, traffic) are not real.</li>
+            <li>
+              Roadside vehicles are <strong>SIMULATED</strong> on OSM roads (procedural). They are not live GPS
+              or congestion.
+            </li>
+            <li>
+              Live City uses free Open-Meteo for weather/rainfall (shared city sample). Rain particles and wet
+              roads follow those readings. CAMS air quality is a <em>model</em> cell, not CPCB. Live congestion
+              remains unavailable.
+            </li>
             <li>There are no building interiors.</li>
             <li>
               Developers: press <kbd className="rounded bg-white/10 px-1">Shift+D</kbd> for data-quality mode
